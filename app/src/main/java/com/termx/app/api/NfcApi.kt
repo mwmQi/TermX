@@ -70,8 +70,12 @@ object NfcApi {
         } catch (e: FormatException) { "Error: Format error - ${e.message}" }
         catch (e: IOException) { "Error: I/O error - ${e.message}" }
         finally { try { ndef.close() } catch (_: IOException) {} }
+<<<<<<< HEAD
     } catch (e: Exception) { Log.e(TAG, "NFC write failed", e); "Error: ${e.message}" }
     }
+=======
+    } catch (e: Exception) { Log.e(TAG, "NFC write failed", e); "Error: ${e.message}" } }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     private fun parseNdefMessage(msg: NdefMessage): String = msg.records.joinToString(" | ") { parseNdefRecord(it) }
 

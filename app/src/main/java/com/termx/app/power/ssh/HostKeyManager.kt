@@ -406,10 +406,8 @@ class HostKeyManager(private val context: Context) {
                 }
                 is ECPrivateKey -> {
                     val factory = KeyFactory.getInstance("EC")
-                    val pubSpec = ECPublicKeySpec(
-                        privateKey.params.generator.multiply(privateKey.s),
-                        privateKey.params
-                    )
+                    val w = ecPointMultiply(privateKey.params.generator, privateKey.s, privateKey.params)
+                    val pubSpec = ECPublicKeySpec(w, privateKey.params)
                     val publicKey = factory.generatePublic(pubSpec)
                     return KeyPair(publicKey, privateKey)
                 }
@@ -443,8 +441,13 @@ class HostKeyManager(private val context: Context) {
         // PKCS#8 wrapper for RSA:
         // SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL },
         //   OCTET STRING { <pkcs1-data> } }
+<<<<<<< HEAD
         val rsaOid = byteArrayOf(0x30.toByte(), 0x0D.toByte(), 0x06.toByte(), 0x09.toByte(), 0x2A.toByte(), 0x86.toByte(), 0x48.toByte(), 0x86.toByte(),
             0xF7.toByte(), 0x0D.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x05.toByte(), 0x00.toByte())
+=======
+        val rsaOid = byteArrayOf(0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86.toByte(), 0x48, 0x86.toByte(),
+            0xF7.toByte(), 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00)
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
         val wrapped = ByteArrayOutputStream()
         wrapped.write(0x30) // SEQUENCE
@@ -600,6 +603,65 @@ class HostKeyManager(private val context: Context) {
         }
 
         return buf.toByteArray()
+    }
+
+    /**
+     * Multiply an EC point by a scalar using double-and-add algorithm.
+     * Required because java.security.spec.ECPoint does not have a multiply method.
+     */
+    private fun ecPointMultiply(
+        generator: java.security.spec.ECPoint,
+        scalar: BigInteger,
+        params: java.security.spec.ECParameterSpec
+    ): java.security.spec.ECPoint {
+        val curve = params.curve
+        val a = curve.a
+        val prime = (curve.field as java.security.spec.ECFieldFp).p
+
+        var result: java.security.spec.ECPoint? = null // point at infinity
+
+        for (i in scalar.bitLength() - 1 downTo 0) {
+            if (result != null) {
+                result = ecPointDouble(result, a, prime)
+            }
+            if (scalar.testBit(i)) {
+                if (result == null) {
+                    result = generator
+                } else {
+                    result = ecPointAdd(result, generator, a, prime)
+                }
+            }
+        }
+
+        return result ?: java.security.spec.ECPoint(BigInteger.ZERO, BigInteger.ZERO)
+    }
+
+    private fun ecPointAdd(
+        p1: java.security.spec.ECPoint,
+        p2: java.security.spec.ECPoint,
+        a: BigInteger,
+        prime: BigInteger
+    ): java.security.spec.ECPoint {
+        val dy = p2.affineY.subtract(p1.affineY)
+        val dx = p2.affineX.subtract(p1.affineX)
+        val lambda = dy.multiply(dx.modInverse(prime)).mod(prime)
+        val x3 = lambda.multiply(lambda).subtract(p1.affineX).subtract(p2.affineX).mod(prime)
+        val y3 = lambda.multiply(p1.affineX.subtract(x3)).subtract(p1.affineY).mod(prime)
+        return java.security.spec.ECPoint(x3, y3)
+    }
+
+    private fun ecPointDouble(
+        p: java.security.spec.ECPoint,
+        a: BigInteger,
+        prime: BigInteger
+    ): java.security.spec.ECPoint {
+        val lambda = BigInteger.valueOf(3).multiply(p.affineX).multiply(p.affineX)
+            .add(a)
+            .multiply(BigInteger.valueOf(2).multiply(p.affineY).modInverse(prime))
+            .mod(prime)
+        val x3 = lambda.multiply(lambda).subtract(BigInteger.valueOf(2).multiply(p.affineX)).mod(prime)
+        val y3 = lambda.multiply(p.affineX.subtract(x3)).subtract(p.affineY).mod(prime)
+        return java.security.spec.ECPoint(x3, y3)
     }
 
     /**

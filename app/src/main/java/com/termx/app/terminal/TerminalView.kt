@@ -528,9 +528,14 @@ class TerminalView @JvmOverloads constructor(
 
         override fun performEditorAction(actionCode: Int): Boolean {
             when (actionCode) {
+<<<<<<< HEAD
                 android.view.inputmethod.EditorInfo.IME_ACTION_DONE,
                 android.view.inputmethod.EditorInfo.IME_ACTION_DONE,
                 android.view.inputmethod.EditorInfo.IME_ACTION_NEXT -> {
+=======
+                EditorInfo.IME_ACTION_DONE,
+                EditorInfo.IME_ACTION_NEXT -> {
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                     terminalView.session?.sendEnter()
                     return true
                 }

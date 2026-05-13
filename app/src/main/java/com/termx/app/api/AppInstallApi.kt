@@ -37,8 +37,12 @@ object AppInstallApi {
         })
         Log.i(TAG, "Install: ${apk.name}"); "Install initiated: ${apk.name} (${apk.length()}B)"
     } catch (e: SecurityException) { "Error: REQUEST_INSTALL_PACKAGES permission required" }
+<<<<<<< HEAD
     catch (e: Exception) { Log.e(TAG, "Install failed", e); "Error: ${e.message}" }
     }
+=======
+    catch (e: Exception) { Log.e(TAG, "Install failed", e); "Error: ${e.message}" } }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Uninstall app by package name. */
     fun uninstallApp(context: Context, packageName: String): String { return try {
@@ -49,8 +53,12 @@ object AppInstallApi {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         })
         "Uninstall initiated: $packageName"
+<<<<<<< HEAD
     } catch (e: Exception) { "Error: ${e.message}" }
     }
+=======
+    } catch (e: Exception) { "Error: ${e.message}" } }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Check if app is installed. */
     fun isAppInstalled(context: Context, packageName: String): String = try {
@@ -110,6 +118,10 @@ object AppInstallApi {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent); Log.i(TAG, "Launched: $packageName"); "Launched: $packageName"
     } catch (_: PackageManager.NameNotFoundException) { "Error: Package not found: $packageName" }
+<<<<<<< HEAD
     catch (e: Exception) { "Error: ${e.message}" }
     }
+=======
+    catch (e: Exception) { "Error: ${e.message}" } }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 }

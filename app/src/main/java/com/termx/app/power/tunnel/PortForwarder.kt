@@ -1080,7 +1080,7 @@ class PortForwarder(private val context: Context) {
      * Process a CLI command for the tunnel subsystem.
      *
      * This method is the main entry point when the user runs
-     * `termx-tunnel <command> [args...]` from the terminal.
+     * `termx-tunnel <command> args` from the terminal.
      *
      * @param args Command-line arguments.
      * @return Output string to display in the terminal.

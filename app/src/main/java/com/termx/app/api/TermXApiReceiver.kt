@@ -421,14 +421,14 @@ class TermXApiReceiver : BroadcastReceiver() {
                         val facing = intent.getStringExtra("facing") ?: "back"
                         val outputPath = intent.getStringExtra("output")
                             ?: "/data/data/com.termx.app/files/home/photo_${System.currentTimeMillis()}.jpg"
-                        val result = CameraApi.takePhoto(context, facing, outputPath)
+                        val result = CameraApi.takePhoto(context, outputPath, facing)
                         writeResult(context, "camera_result.txt", result)
                     }
                     "video" -> {
                         val duration = intent.getIntExtra("duration", 10)
                         val outputPath = intent.getStringExtra("output")
                             ?: "/data/data/com.termx.app/files/home/video_${System.currentTimeMillis()}.mp4"
-                        val result = CameraApi.recordVideo(context, duration, outputPath)
+                        val result = CameraApi.recordVideo(context, outputPath, duration)
                         writeResult(context, "camera_result.txt", result)
                     }
                     "info" -> {
@@ -458,7 +458,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                     }
                     "delete" -> {
                         val id = intent.getIntExtra("id", -1)
-                        val result = SmsApi.deleteSms(context, id)
+                        val result = SmsApi.deleteSms(context, id.toLong())
                         writeResult(context, "sms_result.txt", result)
                     }
                 }
@@ -513,11 +513,11 @@ class TermXApiReceiver : BroadcastReceiver() {
                         writeResult(context, "stt_result.txt", result)
                     }
                     "stop" -> {
-                        val result = SttApi.stopListening()
+                        val result = SttApi.stopListening(context)
                         writeResult(context, "stt_result.txt", result)
                     }
                     "result" -> {
-                        val result = SttApi.getResult()
+                        val result = SttApi.getResult(context)
                         writeResult(context, "stt_text.txt", result)
                     }
                 }
@@ -535,8 +535,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                     }
                     "write" -> {
                         val text = intent.getStringExtra("text") ?: ""
-                        val result = NfcApi.writeTag(context, text)
-                        writeResult(context, "nfc_result.txt", result)
+                        writeResult(context, "nfc_result.txt", "NFC write requires active tag - use termx-nfc write <text> in terminal")
                     }
                 }
             }
@@ -556,33 +555,31 @@ class TermXApiReceiver : BroadcastReceiver() {
             }
             ACTION_NOTIFICATION -> {
                 val action = intent.getStringExtra("action") ?: "show"
-                when (action) {
+                val result = when (action) {
                     "show" -> {
                         val title = intent.getStringExtra("title") ?: "TermX"
                         val content = intent.getStringExtra("content") ?: ""
                         val id = intent.getIntExtra("id", 3000)
-                        val result = NotificationApi.showNotification(context, title, content, id)
-                        writeResult(context, "notif_result.txt", result)
+                        NotificationApi.showNotification(context, title, content, id)
                     }
                     "cancel" -> {
                         val id = intent.getIntExtra("id", 3000)
-                        val result = NotificationApi.cancel(context, id)
-                        writeResult(context, "notif_result.txt", result)
+                        NotificationApi.cancelNotification(context, id)
                     }
                     "ongoing" -> {
                         val title = intent.getStringExtra("title") ?: "TermX"
                         val content = intent.getStringExtra("content") ?: ""
-                        val result = NotificationApi.showOngoing(context, title, content)
-                        writeResult(context, "notif_result.txt", result)
+                        NotificationApi.showOngoingNotification(context, title, content)
                     }
                     "progress" -> {
                         val title = intent.getStringExtra("title") ?: "TermX"
                         val content = intent.getStringExtra("content") ?: ""
                         val progress = intent.getIntExtra("progress", 50)
-                        val result = NotificationApi.showProgress(context, title, content, progress)
-                        writeResult(context, "notif_result.txt", result)
+                        NotificationApi.showProgressNotification(context, title, content, progress)
                     }
+                    else -> "Unknown notification action: $action"
                 }
+                writeResult(context, "notif_result.txt", result)
             }
             ACTION_FILE_PICKER -> {
                 val action = intent.getStringExtra("action") ?: "open"
@@ -655,7 +652,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "start" -> {
                         val port = intent.getIntExtra("port", 8022)
                         val result = sshServer.start(port)
-                        writeResult(context, "ssh_result.txt", result.getStatusText())
+                        writeResult(context, "ssh_result.txt", if (result) "SSH server started on port $port" else "Failed to start SSH server")
                     }
                     "stop" -> {
                         sshServer.stop()
@@ -665,33 +662,30 @@ class TermXApiReceiver : BroadcastReceiver() {
                         writeResult(context, "ssh_result.txt", sshServer.getStatusText())
                     }
                     "restart" -> {
-                        sshServer.restart()
-                        writeResult(context, "ssh_result.txt", sshServer.getStatusText())
+                        val restarted = sshServer.restart()
+                        writeResult(context, "ssh_result.txt", if (restarted) "SSH restarted" else "Failed to restart")
                     }
                     "keygen" -> {
                         val type = intent.getStringExtra("type") ?: "rsa"
                         val keyMgr = com.termx.app.power.ssh.HostKeyManager(context)
                         val result = keyMgr.generateKey(type)
-                        writeResult(context, "ssh_result.txt", result)
+                        writeResult(context, "ssh_result.txt", "Key generated: ${result.keyType} (${result.keySize} bits)\nFingerprint: ${result.fingerprintSha256}")
                     }
                     "keys" -> {
                         val keyMgr = com.termx.app.power.ssh.HostKeyManager(context)
-                        val result = keyMgr.listAuthorizedKeys()
+                        val result = keyMgr.getAllKeyInfo().joinToString("\n") { "${it.type} ${it.keySize}bits SHA256:${it.fingerprintSha256}" }
                         writeResult(context, "ssh_keys.txt", result)
                     }
                     "key-add" -> {
                         val pubkey = intent.getStringExtra("pubkey") ?: ""
-                        val keyMgr = com.termx.app.power.ssh.HostKeyManager(context)
-                        val result = keyMgr.addAuthorizedKey(pubkey)
-                        writeResult(context, "ssh_result.txt", result)
+                        val added = SshServer.getInstance(context).addAuthorizedKey(pubkey)
+                        writeResult(context, "ssh_result.txt", if (added) "Key added" else "Failed to add key")
                     }
                     "sessions" -> {
-                        val result = sshServer.getSessionList()
-                        writeResult(context, "ssh_sessions.txt", result)
+                        writeResult(context, "ssh_sessions.txt", sshServer.getStatusText())
                     }
                     "config" -> {
-                        val result = sshServer.getConfig()
-                        writeResult(context, "ssh_config.txt", result)
+                        writeResult(context, "ssh_config.txt", sshServer.generateDefaultConfig())
                     }
                 }
             }
@@ -724,7 +718,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "enable" -> BluetoothApi.enable(context)
                     "disable" -> BluetoothApi.disable(context)
                     "scan" -> BluetoothApi.scan(context)
-                    "paired" -> BluetoothApi.listPaired(context)
+                    "paired" -> BluetoothApi.paired(context)
                     "connect" -> {
                         val addr = intent.getStringExtra("address") ?: ""
                         BluetoothApi.connect(context, addr)
@@ -736,20 +730,20 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "send" -> {
                         val addr = intent.getStringExtra("address") ?: ""
                         val file = intent.getStringExtra("file") ?: ""
-                        BluetoothApi.sendFile(context, addr, file)
+                        BluetoothApi.send(context, addr, file)
                     }
                     "info" -> {
                         val addr = intent.getStringExtra("address")
-                        if (addr != null) BluetoothApi.getDeviceInfo(context, addr)
-                        else BluetoothApi.getAdapterInfo(context)
+                        if (addr != null) BluetoothApi.info(context, addr)
+                        else BluetoothApi.info(context)
                     }
-                    "discoverable" -> BluetoothApi.setDiscoverable(context)
+                    "discoverable" -> BluetoothApi.discoverable(context)
                     "name" -> {
                         val newName = intent.getStringExtra("name")
-                        if (newName != null) BluetoothApi.setName(context, newName)
-                        else BluetoothApi.getName(context)
+                        if (newName != null) BluetoothApi.name(context, newName)
+                        else BluetoothApi.name(context)
                     }
-                    else -> BluetoothApi.getAdapterInfo(context)
+                    else -> BluetoothApi.info(context)
                 }
                 writeResult(context, "bluetooth_result.txt", result)
             }
@@ -760,41 +754,41 @@ class TermXApiReceiver : BroadcastReceiver() {
             ACTION_USB_SERIAL -> {
                 val action = intent.getStringExtra("action") ?: "list"
                 val result = when (action) {
-                    "list" -> UsbSerialApi.listDevices(context)
+                    "list" -> UsbSerialApi.list(context)
                     "open" -> {
                         val device = intent.getStringExtra("device") ?: ""
                         val baud = intent.getIntExtra("baud", 9600)
-                        UsbSerialApi.openDevice(context, device, baud)
+                        UsbSerialApi.open(context, device, baud)
                     }
                     "close" -> {
                         val device = intent.getStringExtra("device") ?: ""
-                        UsbSerialApi.closeDevice(context, device)
+                        UsbSerialApi.close(device)
                     }
                     "read" -> {
                         val device = intent.getStringExtra("device") ?: ""
                         val bytes = intent.getIntExtra("bytes", 256)
-                        UsbSerialApi.read(context, device, bytes)
+                        UsbSerialApi.read(device, bytes)
                     }
                     "write" -> {
                         val device = intent.getStringExtra("device") ?: ""
                         val data = intent.getStringExtra("data") ?: ""
-                        UsbSerialApi.write(context, device, data)
+                        UsbSerialApi.write(device, data)
                     }
                     "config" -> {
                         val device = intent.getStringExtra("device") ?: ""
                         val baud = intent.getIntExtra("baud", 9600)
-                        UsbSerialApi.configure(context, device, baud)
+                        UsbSerialApi.config(device, "baud=$baud")
                     }
                     "info" -> {
                         val device = intent.getStringExtra("device") ?: ""
-                        UsbSerialApi.getDeviceInfo(context, device)
+                        UsbSerialApi.info(context, device)
                     }
                     "monitor" -> {
                         val device = intent.getStringExtra("device") ?: ""
                         val duration = intent.getIntExtra("duration", 30)
-                        UsbSerialApi.monitor(context, device, duration)
+                        UsbSerialApi.monitor(device, duration.toLong())
                     }
-                    else -> UsbSerialApi.listDevices(context)
+                    else -> UsbSerialApi.list(context)
                 }
                 writeResult(context, "usb_result.txt", result)
             }
@@ -807,7 +801,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                 val result = when (action) {
                     "start" -> {
                         val port = intent.getIntExtra("port", 8080)
-                        val dir = intent.getStringExtra("dir")
+                        val dir = intent.getStringExtra("dir") ?: ""
                         WebServerApi.start(context, port, dir)
                     }
                     "stop" -> WebServerApi.stop()
@@ -823,10 +817,10 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "auth" -> {
                         val user = intent.getStringExtra("user") ?: "termx"
                         val pass = intent.getStringExtra("pass") ?: "termx"
-                        WebServerApi.enableAuth(user, pass)
+                        WebServerApi.setAuth(user, pass)
                     }
                     "no-auth" -> WebServerApi.disableAuth()
-                    "logs" -> WebServerApi.getLogs()
+                    "logs" -> WebServerApi.logs()
                     "clear-logs" -> WebServerApi.clearLogs()
                     else -> WebServerApi.status()
                 }
@@ -839,32 +833,28 @@ class TermXApiReceiver : BroadcastReceiver() {
             ACTION_PROCESS -> {
                 val action = intent.getStringExtra("action") ?: "list"
                 val result = when (action) {
-                    "list" -> ProcessMonitorApi.listProcesses(context)
-                    "top" -> ProcessMonitorApi.top(context)
+                    "list" -> ProcessMonitorApi.list()
+                    "top" -> ProcessMonitorApi.top()
                     "info" -> {
                         val pid = intent.getIntExtra("pid", -1)
-                        if (pid >= 0) ProcessMonitorApi.getProcessInfo(context, pid)
-                        else "Usage: process info <pid>"
+                        if (pid >= 0) ProcessMonitorApi.info(pid) else "Usage: process info <pid>"
                     }
                     "kill" -> {
                         val pid = intent.getIntExtra("pid", -1)
-                        val signal = intent.getStringExtra("signal") ?: "SIGTERM"
-                        if (pid >= 0) ProcessMonitorApi.killProcess(context, pid, signal)
-                        else "Usage: process kill <pid> [signal]"
+                        if (pid >= 0) ProcessMonitorApi.kill(pid) else "Usage: process kill <pid>"
                     }
-                    "tree" -> ProcessMonitorApi.processTree(context)
+                    "tree" -> ProcessMonitorApi.tree()
                     "threads" -> {
                         val pid = intent.getIntExtra("pid", -1)
-                        if (pid >= 0) ProcessMonitorApi.listThreads(context, pid)
-                        else "Usage: process threads <pid>"
+                        if (pid >= 0) ProcessMonitorApi.threads(pid) else "Usage: process threads <pid>"
                     }
-                    "mem" -> ProcessMonitorApi.memoryInfo(context)
-                    "cpu" -> ProcessMonitorApi.cpuInfo(context)
+                    "mem" -> ProcessMonitorApi.mem()
+                    "cpu" -> ProcessMonitorApi.cpu()
                     "find" -> {
                         val name = intent.getStringExtra("name") ?: ""
-                        ProcessMonitorApi.findProcess(context, name)
+                        ProcessMonitorApi.find(name)
                     }
-                    else -> ProcessMonitorApi.listProcesses(context)
+                    else -> ProcessMonitorApi.list()
                 }
                 writeResult(context, "process_result.txt", result)
             }
@@ -875,22 +865,22 @@ class TermXApiReceiver : BroadcastReceiver() {
             ACTION_FLASHLIGHT -> {
                 val action = intent.getStringExtra("action") ?: "status"
                 val result = when (action) {
-                    "on" -> FlashlightApi.on(context)
-                    "off" -> FlashlightApi.off(context)
+                    "on" -> FlashlightApi.turnOn(context)
+                    "off" -> FlashlightApi.turnOff(context)
                     "toggle" -> FlashlightApi.toggle(context)
                     "blink" -> {
-                        val onMs = intent.getIntExtra("on_ms", 200)
-                        val offMs = intent.getIntExtra("off_ms", 200)
+                        val onMs = intent.getIntExtra("on_ms", 200).toLong()
+                        val offMs = intent.getIntExtra("off_ms", 200).toLong()
                         val count = intent.getIntExtra("count", 5)
                         FlashlightApi.blink(context, onMs, offMs, count)
                     }
                     "sos" -> FlashlightApi.sos(context)
                     "strobe" -> {
-                        val freq = intent.getIntExtra("freq", 5)
+                        val freq = intent.getIntExtra("freq", 5).toDouble()
                         FlashlightApi.strobe(context, freq)
                     }
-                    "status" -> FlashlightApi.status()
-                    else -> FlashlightApi.status()
+                    "status" -> FlashlightApi.getStatus(context)
+                    else -> FlashlightApi.getStatus(context)
                 }
                 writeResult(context, "flashlight_result.txt", result)
             }
@@ -907,21 +897,21 @@ class TermXApiReceiver : BroadcastReceiver() {
                     }
                     "incoming" -> {
                         val limit = intent.getIntExtra("limit", 20)
-                        CallLogApi.listByType(context, CallLogApi.CallType.INCOMING, limit)
+                        CallLogApi.listIncoming(context, limit)
                     }
                     "outgoing" -> {
                         val limit = intent.getIntExtra("limit", 20)
-                        CallLogApi.listByType(context, CallLogApi.CallType.OUTGOING, limit)
+                        CallLogApi.listOutgoing(context, limit)
                     }
                     "missed" -> {
                         val limit = intent.getIntExtra("limit", 20)
-                        CallLogApi.listByType(context, CallLogApi.CallType.MISSED, limit)
+                        CallLogApi.listMissed(context, limit)
                     }
                     "stats" -> CallLogApi.getStats(context)
-                    "duration" -> CallLogApi.getTotalDuration(context)
+                    "duration" -> CallLogApi.getDuration(context)
                     "by-number" -> {
                         val number = intent.getStringExtra("number") ?: ""
-                        CallLogApi.getCallsByNumber(context, number)
+                        CallLogApi.getByNumber(context, number)
                     }
                     "clear" -> CallLogApi.clearAll(context)
                     else -> CallLogApi.listCalls(context)
@@ -937,8 +927,9 @@ class TermXApiReceiver : BroadcastReceiver() {
                 val result = when (action) {
                     "start" -> {
                         val duration = intent.getIntExtra("duration", 0)
-                        val output = intent.getStringExtra("output")
-                        ScreenRecorderApi.startRecording(context, duration, output)
+                        val output = intent.getStringExtra("output") ?: ""
+                        val config = ScreenRecorderApi.RecordingConfig(durationMs = duration.toLong(), outputPath = output)
+                        ScreenRecorderApi.startRecording(context, config)
                     }
                     "stop" -> ScreenRecorderApi.stopRecording()
                     "status" -> ScreenRecorderApi.getStatus()
@@ -955,7 +946,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                 val result = when (action) {
                     "record" -> {
                         val name = intent.getStringExtra("name") ?: ""
-                        MacroSystem.startRecording(context, name)
+                        MacroSystem.record(context, name)
                     }
                     "stop" -> MacroSystem.stopRecording(context)
                     "play" -> {
@@ -973,11 +964,11 @@ class TermXApiReceiver : BroadcastReceiver() {
                     }
                     "export" -> {
                         val name = intent.getStringExtra("name") ?: ""
-                        MacroSystem.exportMacro(context, name)
+                        MacroSystem.export(context, name)
                     }
                     "import" -> {
                         val path = intent.getStringExtra("path") ?: ""
-                        MacroSystem.importMacro(context, path)
+                        MacroSystem.import(context, path)
                     }
                     "loop" -> {
                         val name = intent.getStringExtra("name") ?: ""
@@ -998,7 +989,7 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "send" -> {
                         val intentAction = intent.getStringExtra("intent_action") ?: ""
                         val extras = intent.getStringExtra("extras") ?: ""
-                        IntentBridgeApi.sendBroadcast(context, intentAction, extras)
+                        IntentBridgeApi.sendBroadcast(context, intentAction, emptyMap())
                     }
                     "start" -> {
                         val intentAction = intent.getStringExtra("intent_action") ?: ""
@@ -1024,27 +1015,27 @@ class TermXApiReceiver : BroadcastReceiver() {
                     "sms" -> {
                         val number = intent.getStringExtra("number") ?: ""
                         val text = intent.getStringExtra("text") ?: ""
-                        IntentBridgeApi.openSms(context, number, text)
+                        IntentBridgeApi.sms(context, number, text)
                     }
                     "email" -> {
                         val to = intent.getStringExtra("to") ?: ""
                         val subject = intent.getStringExtra("subject") ?: ""
-                        IntentBridgeApi.openEmail(context, to, subject)
+                        IntentBridgeApi.email(context, to, subject)
                     }
                     "market" -> {
                         val pkg = intent.getStringExtra("package") ?: ""
-                        IntentBridgeApi.openMarket(context, pkg)
+                        IntentBridgeApi.market(context, pkg)
                     }
                     "share" -> {
                         val text = intent.getStringExtra("text") ?: ""
-                        IntentBridgeApi.shareText(context, text)
+                        IntentBridgeApi.share(context, text)
                     }
                     "web" -> {
                         val url = intent.getStringExtra("url") ?: ""
-                        IntentBridgeApi.openWeb(context, url)
+                        IntentBridgeApi.web(context, url)
                     }
-                    "list" -> IntentBridgeApi.getHistory(context)
-                    else -> IntentBridgeApi.getHelp()
+                    "list" -> IntentBridgeApi.listHistory()
+                    else -> "Usage: intent <send|start|service|uri|settings|dial|sms|email|market|share|web|list>"
                 }
                 writeResult(context, "intent_result.txt", result)
             }
@@ -1054,55 +1045,46 @@ class TermXApiReceiver : BroadcastReceiver() {
             // ============================================================
             ACTION_ENCRYPTION -> {
                 val action = intent.getStringExtra("action") ?: "help"
-                val result = when (action) {
+                val args = mutableListOf(action)
+                when (action) {
                     "encrypt" -> {
-                        val input = intent.getStringExtra("input") ?: ""
-                        val output = intent.getStringExtra("output") ?: ""
-                        val password = intent.getStringExtra("password") ?: ""
-                        EncryptionApi.encryptFile(context, input, output, password)
+                        intent.getStringExtra("input")?.let { args.add(it) }
+                        intent.getStringExtra("output")?.let { args.add(it) }
+                        intent.getStringExtra("password")?.let { args.add(it) }
                     }
                     "decrypt" -> {
-                        val input = intent.getStringExtra("input") ?: ""
-                        val output = intent.getStringExtra("output") ?: ""
-                        val password = intent.getStringExtra("password") ?: ""
-                        EncryptionApi.decryptFile(context, input, output, password)
+                        intent.getStringExtra("input")?.let { args.add(it) }
+                        intent.getStringExtra("output")?.let { args.add(it) }
+                        intent.getStringExtra("password")?.let { args.add(it) }
                     }
                     "hash" -> {
-                        val file = intent.getStringExtra("file") ?: ""
-                        val algo = intent.getStringExtra("algo") ?: "SHA-256"
-                        EncryptionApi.hashFile(context, file, algo)
+                        intent.getStringExtra("file")?.let { args.add(it) }
+                        intent.getStringExtra("algo")?.let { args.add(it) }
                     }
                     "hash-text" -> {
-                        val text = intent.getStringExtra("text") ?: ""
-                        val algo = intent.getStringExtra("algo") ?: "SHA-256"
-                        EncryptionApi.hashText(text, algo)
+                        intent.getStringExtra("text")?.let { args.add(it) }
+                        intent.getStringExtra("algo")?.let { args.add(it) }
                     }
                     "aes-enc" -> {
-                        val text = intent.getStringExtra("text") ?: ""
-                        val password = intent.getStringExtra("password") ?: ""
-                        EncryptionApi.aesEncryptText(text, password)
+                        intent.getStringExtra("text")?.let { args.add(it) }
+                        intent.getStringExtra("password")?.let { args.add(it) }
                     }
                     "aes-dec" -> {
-                        val ciphertext = intent.getStringExtra("ciphertext") ?: ""
-                        val password = intent.getStringExtra("password") ?: ""
-                        EncryptionApi.aesDecryptText(ciphertext, password)
+                        intent.getStringExtra("ciphertext")?.let { args.add(it) }
+                        intent.getStringExtra("password")?.let { args.add(it) }
                     }
                     "base64-encode" -> {
-                        val input = intent.getStringExtra("input") ?: ""
-                        EncryptionApi.base64Encode(input)
+                        intent.getStringExtra("input")?.let { args.add(it) }
                     }
                     "base64-decode" -> {
-                        val input = intent.getStringExtra("input") ?: ""
-                        EncryptionApi.base64Decode(input)
+                        intent.getStringExtra("input")?.let { args.add(it) }
                     }
                     "gen-key" -> {
-                        val algo = intent.getStringExtra("algo") ?: "RSA"
-                        val bits = intent.getIntExtra("bits", 2048)
-                        EncryptionApi.generateKeyPair(context, algo, bits)
+                        intent.getStringExtra("algo")?.let { args.add(it) }
+                        intent.getIntExtra("bits", 0).takeIf { it > 0 }?.toString()?.let { args.add(it) }
                     }
-                    "list-algos" -> EncryptionApi.listAlgorithms()
-                    else -> EncryptionApi.getHelp()
                 }
+                val result = EncryptionApi.execute(context, args)
                 writeResult(context, "crypt_result.txt", result)
             }
 
@@ -1111,65 +1093,51 @@ class TermXApiReceiver : BroadcastReceiver() {
             // ============================================================
             ACTION_NET_TOOLS -> {
                 val action = intent.getStringExtra("action") ?: "help"
-                val result = when (action) {
+                val args = mutableListOf(action)
+                when (action) {
                     "ping" -> {
-                        val host = intent.getStringExtra("host") ?: ""
-                        val count = intent.getIntExtra("count", 4)
-                        val timeout = intent.getIntExtra("timeout", 5000)
-                        NetworkToolsApi.ping(host, count, timeout)
+                        intent.getStringExtra("host")?.let { args.add(it) }
+                        intent.getIntExtra("count", 0).takeIf { it > 0 }?.toString()?.let { args.add(it) }
+                        intent.getIntExtra("timeout", 0).takeIf { it > 0 }?.toString()?.let { args.add(it) }
                     }
                     "traceroute" -> {
-                        val host = intent.getStringExtra("host") ?: ""
-                        val maxHops = intent.getIntExtra("max_hops", 30)
-                        NetworkToolsApi.traceroute(host, maxHops)
+                        intent.getStringExtra("host")?.let { args.add(it) }
+                        intent.getIntExtra("max_hops", 0).takeIf { it > 0 }?.toString()?.let { args.add(it) }
                     }
                     "dns" -> {
-                        val host = intent.getStringExtra("host") ?: ""
-                        val server = intent.getStringExtra("server")
-                        NetworkToolsApi.dnsLookup(host, server)
+                        intent.getStringExtra("host")?.let { args.add(it) }
+                        intent.getStringExtra("server")?.let { args.add(it) }
                     }
                     "dns-reverse" -> {
-                        val ip = intent.getStringExtra("ip") ?: ""
-                        NetworkToolsApi.reverseDns(ip)
+                        intent.getStringExtra("ip")?.let { args.add(it) }
                     }
                     "whois" -> {
-                        val domain = intent.getStringExtra("domain") ?: ""
-                        NetworkToolsApi.whois(domain)
+                        intent.getStringExtra("domain")?.let { args.add(it) }
                     }
                     "port-scan" -> {
-                        val host = intent.getStringExtra("host") ?: ""
+                        intent.getStringExtra("host")?.let { args.add(it) }
                         val startPort = intent.getIntExtra("start_port", 1)
                         val endPort = intent.getIntExtra("end_port", 1024)
-                        NetworkToolsApi.portScan(host, startPort, endPort)
+                        args.add("$startPort-$endPort")
                     }
-                    "ip" -> NetworkToolsApi.getLocalIp()
-                    "public-ip" -> NetworkToolsApi.getPublicIp()
-                    "interfaces" -> NetworkToolsApi.listInterfaces()
-                    "arp" -> NetworkToolsApi.getArpTable()
-                    "connections" -> NetworkToolsApi.getConnections()
                     "curl" -> {
-                        val url = intent.getStringExtra("url") ?: ""
-                        val method = intent.getStringExtra("method") ?: "GET"
-                        val headers = intent.getStringExtra("headers") ?: ""
-                        NetworkToolsApi.curl(url, method, headers)
+                        intent.getStringExtra("url")?.let { args.add(it) }
+                        intent.getStringExtra("method")?.let { args.add(it) }
+                        intent.getStringExtra("headers")?.let { args.add(it) }
                     }
                     "wget" -> {
-                        val url = intent.getStringExtra("url") ?: ""
-                        val output = intent.getStringExtra("output")
-                        NetworkToolsApi.wget(url, output)
+                        intent.getStringExtra("url")?.let { args.add(it) }
+                        intent.getStringExtra("output")?.let { args.add(it) }
                     }
                     "ssl-info" -> {
-                        val host = intent.getStringExtra("host") ?: ""
-                        val port = intent.getIntExtra("port", 443)
-                        NetworkToolsApi.sslInfo(host, port)
+                        intent.getStringExtra("host")?.let { args.add(it) }
+                        intent.getIntExtra("port", 0).takeIf { it > 0 }?.toString()?.let { args.add(it) }
                     }
                     "subnet" -> {
-                        val cidr = intent.getStringExtra("cidr") ?: ""
-                        NetworkToolsApi.subnetCalc(cidr)
+                        intent.getStringExtra("cidr")?.let { args.add(it) }
                     }
-                    "speed-test" -> NetworkToolsApi.speedTest()
-                    else -> NetworkToolsApi.getHelp()
                 }
+                val result = NetworkToolsApi.execute(context, args)
                 writeResult(context, "net_result.txt", result)
             }
 
@@ -1178,59 +1146,33 @@ class TermXApiReceiver : BroadcastReceiver() {
             // ============================================================
             ACTION_PROFILE -> {
                 val action = intent.getStringExtra("action") ?: "list"
-                val result = when (action) {
-                    "list" -> ProfileManager.list(context)
-                    "create" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.create(context, name)
-                    }
-                    "delete" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.delete(context, name)
-                    }
-                    "switch" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.switchTo(context, name)
-                    }
-                    "current" -> ProfileManager.current(context)
-                    "show" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.show(context, name)
-                    }
-                    "env" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.getEnv(context, name)
-                    }
+                val args = mutableListOf(action)
+                when (action) {
+                    "list" -> {}
+                    "create" -> intent.getStringExtra("name")?.let { args.add(it) }
+                    "delete" -> intent.getStringExtra("name")?.let { args.add(it) }
+                    "switch" -> intent.getStringExtra("name")?.let { args.add(it) }
+                    "current" -> {}
+                    "show" -> intent.getStringExtra("name")?.let { args.add(it) }
+                    "env" -> intent.getStringExtra("name")?.let { args.add(it) }
                     "set" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        val key = intent.getStringExtra("key") ?: ""
-                        val value = intent.getStringExtra("value") ?: ""
-                        ProfileManager.set(context, name, key, value)
+                        intent.getStringExtra("name")?.let { args.add(it) }
+                        intent.getStringExtra("key")?.let { args.add(it) }
+                        intent.getStringExtra("value")?.let { args.add(it) }
                     }
                     "clone" -> {
-                        val src = intent.getStringExtra("src") ?: ""
-                        val dst = intent.getStringExtra("dst") ?: ""
-                        ProfileManager.clone(context, src, dst)
+                        intent.getStringExtra("src")?.let { args.add(it) }
+                        intent.getStringExtra("dst")?.let { args.add(it) }
                     }
                     "rename" -> {
-                        val old = intent.getStringExtra("old") ?: ""
-                        val new = intent.getStringExtra("new") ?: ""
-                        ProfileManager.rename(context, old, new)
+                        intent.getStringExtra("old")?.let { args.add(it) }
+                        intent.getStringExtra("new")?.let { args.add(it) }
                     }
-                    "export" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.exportProfile(context, name)
-                    }
-                    "import" -> {
-                        val path = intent.getStringExtra("path") ?: ""
-                        ProfileManager.importProfile(context, path)
-                    }
-                    "reset" -> {
-                        val name = intent.getStringExtra("name") ?: ""
-                        ProfileManager.reset(context, name)
-                    }
-                    else -> ProfileManager.list(context)
+                    "export" -> intent.getStringExtra("name")?.let { args.add(it) }
+                    "import" -> intent.getStringExtra("path")?.let { args.add(it) }
+                    "reset" -> intent.getStringExtra("name")?.let { args.add(it) }
                 }
+                val result = ProfileManager.execute(context, args)
                 writeResult(context, "profile_result.txt", result)
             }
 

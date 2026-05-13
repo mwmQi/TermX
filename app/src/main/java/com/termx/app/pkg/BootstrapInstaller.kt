@@ -163,7 +163,7 @@ fi
 
 # Set PATH so it includes TermX bin
 if [ -d "$PREFIX/bin" ] ; then
-    PATH="$PREFIX/bin:$PREFIX/bin/applets:$PATH"
+    PATH="$PREFIX/bin:$PREFIX/bin/applets:${'$'}PATH"
 fi
 """.trimIndent() + "\n")
         }

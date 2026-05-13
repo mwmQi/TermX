@@ -361,7 +361,7 @@ class X11DisplayServer(private val context: Context) {
 
             // Send success response
             output.writeByte(1) // success
-            output.writeByte(pad1)
+            output.writeByte(pad1.toInt())
             output.writeShort(11) // protocol major version
             output.writeShort(0)  // protocol minor version
             output.writeShort(0)  // additional data length

@@ -40,7 +40,7 @@ class ExtraKeysView @JvmOverloads constructor(
     private enum class Modifier { NONE, CTRL, ALT, FN }
 
     // Key definitions
-    data class ExtraKey(
+    private data class ExtraKey(
         val label: String,
         val modifier: Modifier = Modifier.NONE,
         val isSticky: Boolean = false,
@@ -161,6 +161,7 @@ class ExtraKeysView @JvmOverloads constructor(
 
                 // Touch handling
                 setOnTouchListener { v, event ->
+                    val tv = v as TextView
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
                             (v as? android.widget.TextView)?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
@@ -169,7 +170,11 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#6C7086"))
                             }
+<<<<<<< HEAD
                             (v as? android.widget.TextView)?.setTextColor(Color.WHITE)
+=======
+                            tv.setTextColor(Color.WHITE)
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                             true
                         }
                         MotionEvent.ACTION_UP -> {
@@ -183,7 +188,11 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
+<<<<<<< HEAD
                             (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
+=======
+                            tv.setTextColor(Color.parseColor("#D4BE98"))
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
                             handleKeyPress(key)
                             true
@@ -194,9 +203,14 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
+<<<<<<< HEAD
                             (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
+=======
+                            tv.setTextColor(Color.parseColor("#D4BE98"))
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                             true
                         }
+                        else -> false
                     }
                 }
             }

@@ -1011,7 +1011,7 @@ object NetworkToolsApi {
                         val now = java.util.Date()
                         val expired = now.after(x509Cert.notAfter)
                         val daysLeft = ((x509Cert.notAfter.time - now.time) / (1000 * 60 * 60 * 24))
-                        sb.appendLine("  Status:     ${if (expired) "EXPIRED" else "Valid ($daysLeft days remaining)")}")
+                        sb.appendLine("  Status:     ${if (expired) "EXPIRED" else "Valid ($daysLeft days remaining)"}")
 
                         // Signature algorithm
                         sb.appendLine("  Sig Alg:    ${x509Cert.sigAlgName}")

@@ -6,7 +6,7 @@ import java.io.*
 import java.net.Socket
 import java.net.SocketException
 import java.nio.charset.StandardCharsets
-import java.util.ArrayList
+import java.net.SocketException
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -157,7 +157,7 @@ class SshSession(
         private const val SSH_FILEXFER_ATTR_UIDGID = 0x00000002
         private const val SSH_FILEXFER_ATTR_PERMISSIONS = 0x00000004
         private const val SSH_FILEXFER_ATTR_ACMODTIME = 0x00000008
-        private const val SSH_FILEXFER_ATTR_EXTENDED = 0x80000000
+        private const val SSH_FILEXFER_ATTR_EXTENDED = -2147483648  // 0x80000000 as signed Int
     }
 
     // ---- Session State ----
@@ -201,7 +201,7 @@ class SshSession(
     data class SshChannel(
         val channelId: Int,
         val type: String,
-        val senderWindow: Int,
+        var senderWindow: Int,
         val senderMaxPacket: Int,
         var recipientWindow: Int = DEFAULT_WINDOW_SIZE,
         var recipientMaxPacket: Int = MAX_PACKET_SIZE,

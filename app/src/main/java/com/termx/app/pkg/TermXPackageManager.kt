@@ -4,7 +4,10 @@ import android.content.Context
 import android.util.Log
 import java.io.*
 import java.util.zip.GZIPInputStream
+<<<<<<< HEAD
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+=======
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
 /**
  * TermX Package Manager — the core of the `pkg` command system.
@@ -464,6 +467,7 @@ class TermXPackageManager(private val context: Context) {
      */
     private fun extractPackage(archiveFile: File): Boolean {
         try {
+<<<<<<< HEAD
             TarArchiveInputStream(GZIPInputStream(FileInputStream(archiveFile))).use { tarStream ->
                 var entry = tarStream.nextTarEntry
                 while (entry != null) {
@@ -504,12 +508,109 @@ class TermXPackageManager(private val context: Context) {
 
                     entry = tarStream.nextTarEntry
                 }
+=======
+            GZIPInputStream(FileInputStream(archiveFile)).use { gzipStream ->
+                extractTar(gzipStream)
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
             }
-
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to extract ${archiveFile.name}", e)
             return false
+        }
+    }
+
+    /**
+     * Simple tar archive extractor.
+     * Handles the POSIX tar format: 512-byte headers followed by file data
+     * padded to 512-byte boundaries.
+     */
+    private fun extractTar(inputStream: InputStream) {
+        val headerSize = 512
+        val header = ByteArray(headerSize)
+
+        while (true) {
+            // Read header block
+            var offset = 0
+            while (offset < headerSize) {
+                val read = inputStream.read(header, offset, headerSize - offset)
+                if (read < 0) return // End of stream
+                offset += read
+            }
+
+            // Check for end-of-archive (two zero blocks)
+            if (header.all { it == 0.toByte() }) break
+
+            // Parse header fields
+            val nameBytes = header.copyOfRange(0, 100)
+            val nameLen = nameBytes.indexOfFirst { it == 0.toByte() }.let { if (it < 0) 100 else it }
+            val name = String(nameBytes, 0, nameLen, Charsets.UTF_8)
+
+            if (name.isEmpty()) break
+
+            val sizeBytes = header.copyOfRange(124, 136)
+            val sizeStr = String(sizeBytes, Charsets.UTF_8).trim { it <= ' ' || it == '\u0000' }
+            val fileSize = sizeStr.toLongOrNull(radix = 8) ?: 0L
+
+            val typeFlag = header[156].toInt().toChar()
+            val isDir = typeFlag == '5' || name.endsWith('/')
+
+            val outputFile = File(prefixDir, name)
+
+            // Security: prevent path traversal
+            if (!outputFile.canonicalPath.startsWith(prefixDir.canonicalPath)) {
+                Log.w(TAG, "Skipping path traversal entry: $name")
+                // Skip the data blocks
+                skipBytes(inputStream, fileSize)
+                continue
+            }
+
+            if (isDir) {
+                outputFile.mkdirs()
+            } else {
+                // Ensure parent directory exists
+                outputFile.parentFile?.mkdirs()
+
+                var remaining = fileSize
+                FileOutputStream(outputFile).use { output ->
+                    val buffer = ByteArray(8192)
+                    while (remaining > 0) {
+                        val toRead = minOf(buffer.size.toLong(), remaining).toInt()
+                        val len = inputStream.read(buffer, 0, toRead)
+                        if (len < 0) break
+                        output.write(buffer, 0, len)
+                        remaining -= len
+                    }
+                }
+
+                // Preserve executable permission
+                if (name.startsWith("bin/") || name.contains("/bin/")) {
+                    try {
+                        Runtime.getRuntime().exec(
+                            arrayOf("chmod", "755", outputFile.absolutePath)
+                        ).waitFor()
+                    } catch (e: Exception) {
+                        Log.w(TAG, "chmod failed for $name: ${e.message}")
+                    }
+                }
+            }
+
+            // Skip padding to 512-byte boundary
+            val padding = (headerSize - (fileSize % headerSize)) % headerSize
+            if (padding > 0) {
+                skipBytes(inputStream, padding)
+            }
+        }
+    }
+
+    private fun skipBytes(stream: InputStream, bytes: Long) {
+        var remaining = bytes
+        val buffer = ByteArray(8192)
+        while (remaining > 0) {
+            val toRead = minOf(buffer.size.toLong(), remaining).toInt()
+            val read = stream.read(buffer, 0, toRead)
+            if (read < 0) break
+            remaining -= read
         }
     }
 

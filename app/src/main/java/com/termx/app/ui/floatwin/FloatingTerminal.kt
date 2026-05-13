@@ -43,7 +43,7 @@ class FloatingTerminal(private val context: Context) {
     fun show() {
         if (isShowing) return
 
-        val layoutParams = WindowManager.LayoutParams().apply {
+        val wmParams = WindowManager.LayoutParams().apply {
             type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -61,14 +61,14 @@ class FloatingTerminal(private val context: Context) {
         }
 
         // Build the floating view
-        floatView = buildFloatView(layoutParams)
+        floatView = buildFloatView(wmParams)
 
-        windowManager.addView(floatView, layoutParams)
+        windowManager.addView(floatView, wmParams)
         isShowing = true
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun buildFloatView(layoutParams: WindowManager.LayoutParams): View {
+    private fun buildFloatView(wmParams: WindowManager.LayoutParams): View {
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(0xFF1E1E2E.toInt())
@@ -85,7 +85,7 @@ class FloatingTerminal(private val context: Context) {
             text = "  λ TermX Float"
             setTextColor(0xFF89B4FA.toInt())
             textSize = 12f
-            layoutParams = LinearLayout.LayoutParams(
+            this.layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f
             )
         }
@@ -115,7 +115,7 @@ class FloatingTerminal(private val context: Context) {
         }
 
         val termContainer = FrameLayout(context).apply {
-            layoutParams = LinearLayout.LayoutParams(
+            this.layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 0, 1f
             )
@@ -129,16 +129,16 @@ class FloatingTerminal(private val context: Context) {
         titleBar.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = layoutParams.x
-                    initialY = layoutParams.y
+                    initialX = wmParams.x
+                    initialY = wmParams.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    layoutParams.x = initialX + (event.rawX - initialTouchX).toInt()
-                    layoutParams.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(floatView, layoutParams)
+                    wmParams.x = initialX + (event.rawX - initialTouchX).toInt()
+                    wmParams.y = initialY + (event.rawY - initialTouchY).toInt()
+                    windowManager.updateViewLayout(floatView, wmParams)
                     true
                 }
                 else -> false
@@ -152,13 +152,13 @@ class FloatingTerminal(private val context: Context) {
         var isExpanded = false
         resizeBtn.setOnClickListener {
             if (isExpanded) {
-                layoutParams.width = 600
-                layoutParams.height = 400
+                wmParams.width = 600
+                wmParams.height = 400
             } else {
-                layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT
-                layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT
+                wmParams.width = WindowManager.LayoutParams.MATCH_PARENT
+                wmParams.height = WindowManager.LayoutParams.MATCH_PARENT
             }
-            windowManager.updateViewLayout(floatView, layoutParams)
+            windowManager.updateViewLayout(floatView, wmParams)
             isExpanded = !isExpanded
         }
 

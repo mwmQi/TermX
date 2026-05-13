@@ -434,7 +434,11 @@ class PtySession(
         } else {
             // Fallback: use Android's Process.sendSignal
             try {
+<<<<<<< HEAD
                 val pid = fallbackProcess?.hashCode() ?: return
+=======
+                val pid = getFallbackPid() ?: return
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 android.os.Process.sendSignal(pid, signal)
             } catch (e: Exception) {
                 Log.e(TAG, "Fallback signal failed", e)
@@ -464,7 +468,35 @@ class PtySession(
         return if (useNativePty && nativeHandle != 0L) {
             JniPty.nativeGetChildPid(nativeHandle)
         } else {
+<<<<<<< HEAD
             fallbackProcess?.hashCode() ?: -1
+=======
+            getFallbackPid() ?: -1
+        }
+    }
+
+    /**
+     * Get the PID of the fallback process using reflection.
+     * Process.pid is only available on API 26+; for older versions,
+     * we access the internal pid field via reflection.
+     */
+    private fun getFallbackPid(): Int? {
+        val proc = fallbackProcess ?: return null
+        return try {
+            // Try the public API first (API 26+)
+            val method = proc.javaClass.getMethod("pid")
+            method.invoke(proc) as? Int
+        } catch (_: NoSuchMethodException) {
+            try {
+                // Fallback: access internal pid field
+                val field = proc.javaClass.getDeclaredField("pid")
+                field.isAccessible = true
+                field.getInt(proc)
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not get fallback process PID", e)
+                null
+            }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
         }
     }
 

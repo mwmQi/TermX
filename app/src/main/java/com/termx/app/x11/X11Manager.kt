@@ -401,10 +401,15 @@ object X11Manager {
             "start" -> {
                 val displayNum = args.getOrElse(1) { "0" }.toIntOrNull() ?: 0
                 val resolution = args.getOrElse(2) { "1024x768" }
-                val (w, h) = if (resolution.contains("x")) {
-                    resolution.split("x").let { it[0].toIntOrNull() ?: 1024 to it[1].toIntOrNull() ?: 768 }
+                val w: Int
+                val h: Int
+                if (resolution.contains("x")) {
+                    val parts = resolution.split("x")
+                    w = parts.getOrElse(0) { "1024" }.toIntOrNull() ?: 1024
+                    h = parts.getOrElse(1) { "768" }.toIntOrNull() ?: 768
                 } else {
-                    1024 to 768
+                    w = 1024
+                    h = 768
                 }
                 val vncPort = args.getOrElse(3) { (5900 + displayNum).toString() }.toIntOrNull() ?: (5900 + displayNum)
 

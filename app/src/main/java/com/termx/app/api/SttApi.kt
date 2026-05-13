@@ -1,6 +1,7 @@
 package com.termx.app.api
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -31,7 +32,12 @@ object SttApi {
     fun isAvailable(context: Context): Boolean = try { SpeechRecognizer.isRecognitionAvailable(context) } catch (_: Exception) { false }
 
     /** Start listening for speech. */
+<<<<<<< HEAD
     fun startListening(context: Context, language: String = "en_US", timeoutMs: Int = 10000): String { return try {
+=======
+    fun startListening(context: Context, language: String = "en_US", timeoutMs: Int = 10000): String {
+        return try {
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
         if (!isAvailable(context)) return "Error: Speech recognition not available"
         stopListening(context)
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->

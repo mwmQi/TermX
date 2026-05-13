@@ -399,7 +399,7 @@ object WebServerApi {
         return if (accessLog.isEmpty()) {
             "No access log entries"
         } else {
-            val entries = accessLog.takeLast(limit)
+            val entries = accessLog.toList().takeLast(limit)
             buildString {
                 appendLine("=== Access Logs (last ${entries.size} of ${accessLog.size}) ===")
                 entries.forEach { entry: LogEntry -> appendLine(entry.toLogString()) }
@@ -586,7 +586,7 @@ object WebServerApi {
             }
         }
 
-        try {
+        return try {
             val bytes = if (offset == 0L && length == fileSize) {
                 file.readBytes()
             } else {

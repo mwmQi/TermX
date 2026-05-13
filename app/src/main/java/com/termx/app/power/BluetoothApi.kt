@@ -9,6 +9,7 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
+import java.io.File
 import java.util.*
 
 /**
@@ -652,9 +653,15 @@ object BluetoothApi {
         val profileMap = mapOf(
             ParcelUuid.fromString("0000110A-0000-1000-8000-00805F9B34FB") to BluetoothProfile.A2DP,
             ParcelUuid.fromString("00001105-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HEADSET,
+<<<<<<< HEAD
             ParcelUuid.fromString("0000110E-0000-1000-8000-00805F9B34FB") to BluetoothProfile.A2DP,
             ParcelUuid.fromString("00001112-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HID_DEVICE,
             ParcelUuid.fromString("0000111F-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HEADSET
+=======
+            ParcelUuid.fromString("0000110E-0000-1000-8000-00805F9B34FB") to 11,  // AVRCP
+            ParcelUuid.fromString("00001112-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HID_DEVICE,
+            ParcelUuid.fromString("0000111F-0000-1000-8000-00805F9B34FB") to 18  // HFP
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
         )
 
         val deviceUuids = device.uuids?.toList() ?: emptyList()
@@ -713,8 +720,13 @@ object BluetoothApi {
             val listener = object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                     when (proxy) {
+<<<<<<< HEAD
                         is BluetoothA2dp -> { try { (proxy as BluetoothA2dp).disconnect(device); disconnected = true } catch (_: Exception) {} }
                         is BluetoothHeadset -> { try { (proxy as BluetoothHeadset).disconnect(device); disconnected = true } catch (_: Exception) {} }
+=======
+                        is BluetoothA2dp -> { try { @Suppress("DEPRECATION") proxy.javaClass.getDeclaredMethod("disconnect", BluetoothDevice::class.java).invoke(proxy, device); disconnected = true } catch (_: Exception) {} }
+                        is BluetoothHeadset -> { try { @Suppress("DEPRECATION") proxy.javaClass.getDeclaredMethod("disconnect", BluetoothDevice::class.java).invoke(proxy, device); disconnected = true } catch (_: Exception) {} }
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                     }
                 }
                 override fun onServiceDisconnected(profile: Int) {}
@@ -777,7 +789,13 @@ object BluetoothApi {
 
     private fun profileName(profile: Int): String = when (profile) {
         BluetoothProfile.A2DP -> "A2DP (Advanced Audio)"
+<<<<<<< HEAD
         BluetoothProfile.HEADSET -> "HSP/HFP (Headset/Hands-Free)"
+=======
+        BluetoothProfile.HEADSET -> "HSP (Headset)"
+        18 -> "HFP (Hands-Free)"
+        11 -> "AVRCP (Remote Control)"
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
         BluetoothProfile.HID_DEVICE -> "HID (Input Device)"
         BluetoothProfile.HEALTH -> "HDP (Health Device)"
         else -> "Profile #$profile"

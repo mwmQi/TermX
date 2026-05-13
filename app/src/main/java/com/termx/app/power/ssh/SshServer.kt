@@ -6,7 +6,7 @@ import java.io.*
 import java.net.*
 import java.security.*
 import java.security.spec.*
-import java.util.ArrayList
+import java.math.BigInteger
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -719,7 +719,11 @@ class SshServer(private val context: Context) {
                 serverKexinit = serverKexinit,
                 hostKeyBlob = hostKeyBlob,
                 clientDhPublic = clientPublic,
+<<<<<<< HEAD
                 serverDhPublic = dhKeyPair.public,
+=======
+                serverDhPublic = dhKeyPair.publicKey,
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 sharedSecret = sharedSecret
             )
 
@@ -727,7 +731,11 @@ class SshServer(private val context: Context) {
             val signature = signWithHostKey(hostKeyPair, sessionIdHash)
 
             // Build KEXDH_REPLY message
+<<<<<<< HEAD
             val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.public, signature)
+=======
+            val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.publicKey, signature)
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
             // Send KEXDH_REPLY
             sendSshPacket(output, SSH_MSG_KEXDH_REPLY, replyPayload)
@@ -1000,7 +1008,7 @@ class SshServer(private val context: Context) {
      */
     private fun buildKexdhReplyPayload(
         hostKeyBlob: ByteArray,
-        dhPublic: BigInteger,
+        dhPublic: java.math.BigInteger,
         signature: ByteArray
     ): ByteArray {
         val buf = ByteArrayOutputStream()
@@ -1104,7 +1112,7 @@ class SshServer(private val context: Context) {
     /**
      * Compute the DH shared secret.
      */
-    private fun computeDhSharedSecret(keyPair: DHKeyPair, clientPublic: BigInteger): BigInteger {
+    private fun computeDhSharedSecret(keyPair: DHKeyPair, clientPublic: java.math.BigInteger): java.math.BigInteger {
         return clientPublic.modPow(keyPair.privateKey, keyPair.p)
     }
 
@@ -1114,7 +1122,7 @@ class SshServer(private val context: Context) {
      *   key = HASH(K || H || X || session_id)
      * where X is a single byte identifier (A, B, C, ...).
      */
-    private fun deriveSessionKey(sharedSecret: BigInteger, sessionIdHash: ByteArray): ByteArray {
+    private fun deriveSessionKey(sharedSecret: java.math.BigInteger, sessionIdHash: ByteArray): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")
 
         // Client->Server IV
@@ -1184,9 +1192,9 @@ class SshServer(private val context: Context) {
         clientKexinit: ByteArray,
         serverKexinit: ByteArray,
         hostKeyBlob: ByteArray,
-        clientDhPublic: BigInteger,
-        serverDhPublic: BigInteger,
-        sharedSecret: BigInteger
+        clientDhPublic: java.math.BigInteger,
+        serverDhPublic: java.math.BigInteger,
+        sharedSecret: java.math.BigInteger
     ): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")
 
@@ -1273,7 +1281,7 @@ class SshServer(private val context: Context) {
     /**
      * Encode a BigInteger as an SSH mpint (uint32 length + signed big-endian).
      */
-    private fun encodeMpint(value: BigInteger): ByteArray {
+    private fun encodeMpint(value: java.math.BigInteger): ByteArray {
         val raw = value.toByteArray()
         // Remove leading zero byte if it's just a sign bit
         val trimmed = if (raw.size > 1 && raw[0] == 0.toByte()) {
@@ -1297,8 +1305,8 @@ class SshServer(private val context: Context) {
     /**
      * Decode an SSH mpint from a byte array.
      */
-    private fun decodeMpint(data: ByteArray): BigInteger {
-        return BigInteger(1, data) // Always positive
+    private fun decodeMpint(data: ByteArray): java.math.BigInteger {
+        return java.math.BigInteger(1, data) // Always positive
     }
 
     /**
@@ -1375,10 +1383,10 @@ class SshServer(private val context: Context) {
      * Simple DH key pair holder.
      */
     private data class DHKeyPair(
-        val privateKey: BigInteger,
-        val publicKey: BigInteger,
-        val p: BigInteger,
-        val g: BigInteger
+        val privateKey: java.math.BigInteger,
+        val publicKey: java.math.BigInteger,
+        val p: java.math.BigInteger,
+        val g: java.math.BigInteger
     )
 
     // ---- Authorized Keys Management ----
@@ -1760,6 +1768,7 @@ IdleTimeout 0
         }
     }
 
+<<<<<<< HEAD
     // ---- BigInteger wrapper (for DH) ----
 
     private class BigInteger private constructor(private val value: java.math.BigInteger) : Number(), Comparable<BigInteger> {
@@ -1795,4 +1804,6 @@ IdleTimeout 0
             val ZERO: BigInteger = BigInteger(java.math.BigInteger.ZERO)
         }
     }
+=======
+>>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 }
