@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import java.io.*
 import java.util.zip.GZIPInputStream
-import java.util.zip.TarInputStream
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 
 /**
  * TermX Package Manager — the core of the `pkg` command system.
@@ -464,15 +464,15 @@ class TermXPackageManager(private val context: Context) {
      */
     private fun extractPackage(archiveFile: File): Boolean {
         try {
-            TarInputStream(GZIPInputStream(FileInputStream(archiveFile))).use { tarStream ->
-                var entry = tarStream.nextEntry
+            TarArchiveInputStream(GZIPInputStream(FileInputStream(archiveFile))).use { tarStream ->
+                var entry = tarStream.nextTarEntry
                 while (entry != null) {
                     val outputFile = File(prefixDir, entry.name)
 
                     // Security: prevent path traversal
                     if (!outputFile.canonicalPath.startsWith(prefixDir.canonicalPath)) {
                         Log.w(TAG, "Skipping path traversal entry: ${entry.name}")
-                        entry = tarStream.nextEntry
+                        entry = tarStream.nextTarEntry
                         continue
                     }
 
@@ -484,9 +484,9 @@ class TermXPackageManager(private val context: Context) {
 
                         FileOutputStream(outputFile).use { output ->
                             val buffer = ByteArray(8192)
-                            var len: Int
-                            while (tarStream.read(buffer).also { len = it } != -1) {
-                                output.write(buffer, 0, len)
+                        var bytesRead: Int
+                        while (tarStream.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
                             }
                         }
 
@@ -502,7 +502,7 @@ class TermXPackageManager(private val context: Context) {
                         }
                     }
 
-                    entry = tarStream.nextEntry
+                    entry = tarStream.nextTarEntry
                 }
             }
 

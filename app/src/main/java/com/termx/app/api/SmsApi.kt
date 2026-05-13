@@ -31,7 +31,7 @@ object SmsApi {
 
     /** Send an SMS message. */
     @SuppressLint("MissingPermission")
-    fun sendSms(context: Context, destination: String, message: String): String = try {
+    fun sendSms(context: Context, destination: String, message: String): String { return try {
         if (destination.isBlank()) return "Error: Destination number required"
         if (message.isBlank()) return "Error: Message body required"
         val smsManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
@@ -42,6 +42,7 @@ object SmsApi {
         Log.i(TAG, "SMS sent to $destination"); "SMS sent to $destination (${message.length} chars)"
     } catch (e: SecurityException) { "Error: SEND_SMS permission required" }
     catch (e: Exception) { Log.e(TAG, "SMS send failed", e); "Error: ${e.message}" }
+    }
 
     /** Read SMS inbox messages. */
     @SuppressLint("MissingPermission")

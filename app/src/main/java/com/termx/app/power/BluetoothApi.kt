@@ -433,7 +433,7 @@ object BluetoothApi {
             if (newName == null) {
                 "Bluetooth name: ${adapter.name ?: "N/A"}"
             } else {
-                val success = adapter.name = newName
+                adapter.name = newName
                 if (adapter.name == newName) {
                     Log.i(TAG, "Bluetooth name changed to: $newName")
                     "Bluetooth name set to: $newName"
@@ -502,7 +502,7 @@ object BluetoothApi {
      */
     private fun readRssiFromProc(address: String): Int? {
         return try {
-            val connFile = File("/proc/net/bluetooth/l2cap")
+            val connFile = java.io.File("/proc/net/bluetooth/l2cap")
             if (connFile.exists()) {
                 val lines = connFile.readLines()
                 for (line in lines) {
@@ -652,9 +652,9 @@ object BluetoothApi {
         val profileMap = mapOf(
             ParcelUuid.fromString("0000110A-0000-1000-8000-00805F9B34FB") to BluetoothProfile.A2DP,
             ParcelUuid.fromString("00001105-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HEADSET,
-            ParcelUuid.fromString("0000110E-0000-1000-8000-00805F9B34FB") to BluetoothProfile.AVRCP,
+            ParcelUuid.fromString("0000110E-0000-1000-8000-00805F9B34FB") to BluetoothProfile.A2DP,
             ParcelUuid.fromString("00001112-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HID_DEVICE,
-            ParcelUuid.fromString("0000111F-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HFP
+            ParcelUuid.fromString("0000111F-0000-1000-8000-00805F9B34FB") to BluetoothProfile.HEADSET
         )
 
         val deviceUuids = device.uuids?.toList() ?: emptyList()
@@ -713,8 +713,8 @@ object BluetoothApi {
             val listener = object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
                     when (proxy) {
-                        is BluetoothA2dp -> { try { proxy.disconnect(device); disconnected = true } catch (_: Exception) {} }
-                        is BluetoothHeadset -> { try { proxy.disconnect(device); disconnected = true } catch (_: Exception) {} }
+                        is BluetoothA2dp -> { try { (proxy as BluetoothA2dp).disconnect(device); disconnected = true } catch (_: Exception) {} }
+                        is BluetoothHeadset -> { try { (proxy as BluetoothHeadset).disconnect(device); disconnected = true } catch (_: Exception) {} }
                     }
                 }
                 override fun onServiceDisconnected(profile: Int) {}
@@ -777,9 +777,7 @@ object BluetoothApi {
 
     private fun profileName(profile: Int): String = when (profile) {
         BluetoothProfile.A2DP -> "A2DP (Advanced Audio)"
-        BluetoothProfile.HEADSET -> "HSP (Headset)"
-        BluetoothProfile.HFP -> "HFP (Hands-Free)"
-        BluetoothProfile.AVRCP -> "AVRCP (Remote Control)"
+        BluetoothProfile.HEADSET -> "HSP/HFP (Headset/Hands-Free)"
         BluetoothProfile.HID_DEVICE -> "HID (Input Device)"
         BluetoothProfile.HEALTH -> "HDP (Health Device)"
         else -> "Profile #$profile"

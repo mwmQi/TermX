@@ -958,9 +958,9 @@ class SftpSubsystem(private val context: Context) {
             StatVfsData(
                 bsize = 4096,
                 frsize = 4096,
-                blocks = totalSpace / 4096,
-                bfree = freeSpace / 4096,
-                bavail = availableSpace / 4096,
+                blocks = totalSpace / 4096L,
+                bfree = freeSpace / 4096L,
+                bavail = availableSpace / 4096L,
                 files = 1000000,
                 ffree = 900000,
                 fNameLen = 255
@@ -1168,12 +1168,12 @@ class SftpSubsystem(private val context: Context) {
 
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-                line = line!!
+                val localLine = line!!
 
                 when {
                     // C0755 size filename — create file
-                    line.startsWith("C") -> {
-                        val fileParts = line.substring(1).split("\\s+".toRegex(), 3)
+                    localLine.startsWith("C") -> {
+                        val fileParts = localLine.substring(1).split("\\s+".toRegex(), 3)
                         if (fileParts.size < 3) {
                             writer.write(1)
                             continue
@@ -1207,8 +1207,8 @@ class SftpSubsystem(private val context: Context) {
                         writer.write(0) // Acknowledge completion
                     }
                     // D0755 0 dirname — create directory
-                    line.startsWith("D") -> {
-                        val dirParts = line.substring(1).split("\\s+".toRegex(), 3)
+                    localLine.startsWith("D") -> {
+                        val dirParts = localLine.substring(1).split("\\s+".toRegex(), 3)
                         if (dirParts.size >= 3) {
                             val dirName = dirParts[2]
                             val dirPath = "$path/$dirName"
@@ -1217,12 +1217,12 @@ class SftpSubsystem(private val context: Context) {
                         writer.write(0)
                     }
                     // E — end of directory
-                    line == "E" -> {
+                    localLine == "E" -> {
                         writer.write(0)
                         break
                     }
                     // T — timestamp (acknowledge and skip)
-                    line.startsWith("T") -> {
+                    localLine.startsWith("T") -> {
                         writer.write(0)
                     }
                     else -> {

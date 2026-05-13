@@ -112,14 +112,14 @@ class TermXProperties(private val context: Context) {
                 stream.bufferedReader().use { reader ->
                     var line: String?
                     while (reader.readLine().also { line = it } != null) {
-                        line = line!!.trim()
+                        val localLine = line!!.trim()
                         // Skip comments and empty lines
-                        if (line.isEmpty() || line.startsWith("#")) continue
+                        if (localLine.isEmpty() || localLine.startsWith("#")) continue
                         // Parse key=value
-                        val eqIndex = line.indexOf('=')
+                        val eqIndex = localLine.indexOf('=')
                         if (eqIndex > 0) {
-                            val key = line.substring(0, eqIndex).trim()
-                            val value = line.substring(eqIndex + 1).trim()
+                            val key = localLine.substring(0, eqIndex).trim()
+                            val value = localLine.substring(eqIndex + 1).trim()
                             props[key] = value
                         }
                     }

@@ -4,12 +4,11 @@ import android.util.Log
 import com.termx.app.terminal.PtySession
 import java.io.*
 import java.net.Socket
+import java.net.SocketException
 import java.nio.charset.StandardCharsets
 import java.util.ArrayList
 import java.util.concurrent.*
-import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
@@ -671,8 +670,8 @@ class SshSession(
             val bytesToAdd = input.readInt()
 
             val channel = channels.values.find { it.recipientChannel == recipientChannel }
-            channel?.let {
-                it.senderWindow += bytesToAdd
+            channel?.let { ch ->
+                ch.senderWindow += bytesToAdd
             }
         } catch (e: Exception) {
             Log.w(TAG, "Session #$id: Error handling window adjust", e)

@@ -118,7 +118,7 @@ class SshServerService : Service() {
             val success = sshServer?.start(port, bindAddress) ?: false
             if (success) {
                 Log.i(TAG, "SSH server started on $bindAddress:$port")
-                WakeLockManager.acquire(this, "TermX-SSH")
+                WakeLockManager.acquirePartial(this)
             } else {
                 Log.w(TAG, "SSH server failed to start on $bindAddress:$port")
             }

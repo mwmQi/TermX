@@ -56,6 +56,11 @@ class PreferenceManager(context: Context) {
         get() = prefs.getString("bell_mode", "vibrate") ?: "vibrate"
         set(value) = prefs.edit().putString("bell_mode", value).apply()
 
+    // Bell vibration enabled
+    var bellVibrate: Boolean
+        get() = bellMode == "vibrate"
+        set(value) { if (value) bellMode = "vibrate" }
+
     // Keep screen on
     var keepScreenOn: Boolean
         get() = prefs.getBoolean("keep_screen_on", false)

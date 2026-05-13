@@ -31,12 +31,12 @@ object SttApi {
     fun isAvailable(context: Context): Boolean = try { SpeechRecognizer.isRecognitionAvailable(context) } catch (_: Exception) { false }
 
     /** Start listening for speech. */
-    fun startListening(context: Context, language: String = "en_US", timeoutMs: Int = 10000): String = try {
+    fun startListening(context: Context, language: String = "en_US", timeoutMs: Int = 10000): String { return try {
         if (!isAvailable(context)) return "Error: Speech recognition not available"
         stopListening(context)
         speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context).also { sr ->
             sr.setRecognitionListener(TermXListener(context))
-            sr.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            sr.startListening(android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
@@ -48,6 +48,7 @@ object SttApi {
         Log.i(TAG, "STT started (lang=$language)"); "Listening started (language: $language, timeout: ${timeoutMs}ms)"
     } catch (e: SecurityException) { "Error: RECORD_AUDIO permission required" }
     catch (e: Exception) { Log.e(TAG, "STT start failed", e); "Error: ${e.message}" }
+    }
 
     /** Stop listening. */
     fun stopListening(context: Context): String = try {
@@ -71,7 +72,7 @@ object SttApi {
         try { File(context.cacheDir, RESULT_FILE).writeText(content) } catch (e: Exception) { Log.e(TAG, "Save failed", e) }
     }
 
-    private inner class TermXListener(private val ctx: Context) : RecognitionListener {
+    private class TermXListener(private val ctx: Context) : RecognitionListener {
         override fun onReadyForSpeech(params: Bundle?) { Log.d(TAG, "Ready for speech") }
         override fun onBeginningOfSpeech() { Log.d(TAG, "Speech began") }
         override fun onRmsChanged(rmsdB: Float) {}

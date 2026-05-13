@@ -163,13 +163,13 @@ class ExtraKeysView @JvmOverloads constructor(
                 setOnTouchListener { v, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
-                            v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                            (v as? android.widget.TextView)?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                             v.background = GradientDrawable().apply {
                                 setColor(Color.parseColor("#4A4B6C"))
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#6C7086"))
                             }
-                            v.setTextColor(Color.WHITE)
+                            (v as? android.widget.TextView)?.setTextColor(Color.WHITE)
                             true
                         }
                         MotionEvent.ACTION_UP -> {
@@ -183,7 +183,7 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
-                            v.setTextColor(Color.parseColor("#D4BE98"))
+                            (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
 
                             handleKeyPress(key)
                             true
@@ -194,7 +194,7 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
-                            v.setTextColor(Color.parseColor("#D4BE98"))
+                            (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
                             true
                         }
                     }

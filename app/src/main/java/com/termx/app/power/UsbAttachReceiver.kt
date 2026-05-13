@@ -1,5 +1,6 @@
 package com.termx.app.power
 
+import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -195,11 +196,11 @@ class UsbAttachReceiver : BroadcastReceiver() {
     private fun requestUsbPermission(context: Context, device: UsbDevice) {
         try {
             val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
-            val permissionIntent = PendingIntent.getBroadcast(
+            val permissionIntent = android.app.PendingIntent.getBroadcast(
                 context,
                 0,
                 Intent(ACTION_USB_PERMISSION),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
             )
             usbManager.requestPermission(device, permissionIntent)
         } catch (e: Exception) {

@@ -8,9 +8,7 @@ import java.security.*
 import java.security.spec.*
 import java.util.ArrayList
 import java.util.concurrent.*
-import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.ArrayList
 import java.util.concurrent.atomic.AtomicInteger
 import javax.crypto.*
 import javax.crypto.spec.*
@@ -721,7 +719,7 @@ class SshServer(private val context: Context) {
                 serverKexinit = serverKexinit,
                 hostKeyBlob = hostKeyBlob,
                 clientDhPublic = clientPublic,
-                serverDhPublic = dhKeyPair.public as BigInteger,
+                serverDhPublic = dhKeyPair.public,
                 sharedSecret = sharedSecret
             )
 
@@ -729,7 +727,7 @@ class SshServer(private val context: Context) {
             val signature = signWithHostKey(hostKeyPair, sessionIdHash)
 
             // Build KEXDH_REPLY message
-            val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.public as BigInteger, signature)
+            val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.public, signature)
 
             // Send KEXDH_REPLY
             sendSshPacket(output, SSH_MSG_KEXDH_REPLY, replyPayload)
@@ -988,7 +986,7 @@ class SshServer(private val context: Context) {
         out.write(encodeString(macC2S))
         out.write(encodeString(macS2C))
         out.write(encodeString(compC2S))
-        out.write(encodeString(compC2C))
+        out.write(encodeString(compS2C))
         out.write(encodeString("")) // languages C->S
         out.write(encodeString("")) // languages S->C
         out.writeByte(0) // first kex packet follows = false
@@ -1762,24 +1760,14 @@ IdleTimeout 0
         }
     }
 
-    // ---- BigInteger import (for DH) ----
+    // ---- BigInteger wrapper (for DH) ----
 
-    private class BigInteger(hexStr: String, radix: Int) : Number(), Comparable<BigInteger> {
-        private val value: java.math.BigInteger
+    private class BigInteger private constructor(private val value: java.math.BigInteger) : Number(), Comparable<BigInteger> {
 
-        constructor(ba: ByteArray) : this(1, ba)
-        constructor(signum: Int, magnitude: ByteArray) {
-            value = java.math.BigInteger(signum, magnitude)
-        }
-        constructor(bitLength: Int, random: SecureRandom) {
-            value = java.math.BigInteger(bitLength, random)
-        }
-        constructor(v: java.math.BigInteger) {
-            value = v
-        }
-        init {
-            value = java.math.BigInteger(hexStr, radix)
-        }
+        constructor(hexStr: String, radix: Int) : this(java.math.BigInteger(hexStr, radix))
+        constructor(ba: ByteArray) : this(java.math.BigInteger(ba))
+        constructor(signum: Int, magnitude: ByteArray) : this(java.math.BigInteger(signum, magnitude))
+        constructor(bitLength: Int, random: SecureRandom) : this(java.math.BigInteger(bitLength, random))
 
         fun modPow(exp: BigInteger, m: BigInteger): BigInteger =
             BigInteger(value.modPow(exp.value, m.value))
@@ -1803,8 +1791,8 @@ IdleTimeout 0
         override fun toShort(): Short = value.toShort()
 
         companion object {
-            val ONE = BigInteger(java.math.BigInteger.ONE)
-            val ZERO = BigInteger(java.math.BigInteger.ZERO)
+            val ONE: BigInteger = BigInteger(java.math.BigInteger.ONE)
+            val ZERO: BigInteger = BigInteger(java.math.BigInteger.ZERO)
         }
     }
 }

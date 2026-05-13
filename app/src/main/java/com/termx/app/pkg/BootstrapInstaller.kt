@@ -109,8 +109,8 @@ object BootstrapInstaller {
 
 # Export essential paths
 export PREFIX=$PREFIX
-export PATH=$PREFIX/bin:$PREFIX/bin/applets:\$PATH
-export LD_LIBRARY_PATH=$PREFIX/lib:\$LD_LIBRARY_PATH
+export PATH=$PREFIX/bin:$PREFIX/bin/applets:${'$'}PATH
+export LD_LIBRARY_PATH=$PREFIX/lib:${'$'}LD_LIBRARY_PATH
 export TERM=xterm-256color
 export COLORTERM=truecolor
 export LANG=en_US.UTF-8
@@ -174,7 +174,7 @@ fi
             etcProfile.writeText("""
 # TermX System Profile
 export PREFIX=$PREFIX
-export PATH=$PREFIX/bin:\$PATH
+export PATH=$PREFIX/bin:${'$'}PATH
 export LD_LIBRARY_PATH=$PREFIX/lib
 export TERM=xterm-256color
 
@@ -296,7 +296,7 @@ case "$"COMMAND"" in
         echo "  help                 Show this help message"
         ;;
     *)
-        echo "Unknown command: $COMMAND"
+        echo "Unknown command: ${'$'}COMMAND"
         echo "Run 'pkg help' for usage information."
         exit 1
         ;;

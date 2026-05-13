@@ -129,7 +129,7 @@ data class CronJob(
             sb.appendLine("Human:     ${expr.describe()}")
         }
 
-        return sb.trimEnd()
+        return sb.trimEnd().toString()
     }
 
     // ── JSON serialization ──────────────────────────────────────────
@@ -167,7 +167,7 @@ data class CronJob(
 
     companion object {
         // JSON keys
-        const val KEY_ID                = "id"
+        val KEY_ID                = "id"
         const val KEY_EXPRESSION        = "expression"
         const val KEY_COMMAND           = "command"
         const val KEY_ENABLED           = "enabled"

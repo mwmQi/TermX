@@ -108,7 +108,7 @@ data class TunnelConfig(
         private val TAG = "TunnelConfig"
 
         // JSON field names
-        private const val KEY_ID = "id"
+        private val KEY_ID = "id"
         private const val KEY_NAME = "name"
         private const val KEY_TYPE = "type"
         private const val KEY_LOCAL_HOST = "localHost"
@@ -381,13 +381,13 @@ data class TunnelConfig(
             for (i in networkBytes.indices) {
                 if (bitsRemaining <= 0) break
 
-                val mask = if (bitsRemaining >= 8) {
+                val mask: Byte = if (bitsRemaining >= 8) {
                     0xFF.toByte()
                 } else {
                     ((0xFF shl (8 - bitsRemaining)) and 0xFF).toByte()
                 }
 
-                if ((networkBytes[i] and mask) != (targetBytes[i] and mask)) {
+                if ((networkBytes[i].toInt() and mask.toInt()) != (targetBytes[i].toInt() and mask.toInt())) {
                     return false
                 }
                 bitsRemaining -= 8

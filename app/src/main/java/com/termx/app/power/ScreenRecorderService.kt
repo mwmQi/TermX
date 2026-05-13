@@ -171,7 +171,7 @@ class ScreenRecorderService : Service() {
             // Start periodic notification updates
             startNotificationUpdates()
 
-            WakeLockManager.acquire(this, "TermX-Record")
+            WakeLockManager.acquirePartial(this)
             updateNotification()
 
         } catch (e: Exception) {

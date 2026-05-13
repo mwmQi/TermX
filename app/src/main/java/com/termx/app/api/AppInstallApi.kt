@@ -24,7 +24,7 @@ object AppInstallApi {
     private const val TAG = "AppInstallApi"
 
     /** Install APK from file path. */
-    fun installApk(context: Context, path: String): String = try {
+    fun installApk(context: Context, path: String): String { return try {
         val apk = File(path)
         if (!apk.exists()) return "Error: APK not found: $path"
         if (!apk.name.endsWith(".apk")) return "Error: Not an APK file"
@@ -38,9 +38,10 @@ object AppInstallApi {
         Log.i(TAG, "Install: ${apk.name}"); "Install initiated: ${apk.name} (${apk.length()}B)"
     } catch (e: SecurityException) { "Error: REQUEST_INSTALL_PACKAGES permission required" }
     catch (e: Exception) { Log.e(TAG, "Install failed", e); "Error: ${e.message}" }
+    }
 
     /** Uninstall app by package name. */
-    fun uninstallApp(context: Context, packageName: String): String = try {
+    fun uninstallApp(context: Context, packageName: String): String { return try {
         if (packageName.isBlank()) return "Error: Package name required"
         try { context.packageManager.getPackageInfo(packageName, 0) }
         catch (_: PackageManager.NameNotFoundException) { return "Error: Package not installed: $packageName" }
@@ -49,6 +50,7 @@ object AppInstallApi {
         })
         "Uninstall initiated: $packageName"
     } catch (e: Exception) { "Error: ${e.message}" }
+    }
 
     /** Check if app is installed. */
     fun isAppInstalled(context: Context, packageName: String): String = try {
@@ -102,11 +104,12 @@ object AppInstallApi {
     catch (e: Exception) { "Error: ${e.message}" }
 
     /** Launch app by package name. */
-    fun launchApp(context: Context, packageName: String): String = try {
+    fun launchApp(context: Context, packageName: String): String { return try {
         val intent = context.packageManager.getLaunchIntentForPackage(packageName)
             ?: return "Error: No launchable activity for $packageName"
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent); Log.i(TAG, "Launched: $packageName"); "Launched: $packageName"
     } catch (_: PackageManager.NameNotFoundException) { "Error: Package not found: $packageName" }
     catch (e: Exception) { "Error: ${e.message}" }
+    }
 }

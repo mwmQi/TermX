@@ -402,7 +402,7 @@ object WebServerApi {
             val entries = accessLog.takeLast(limit)
             buildString {
                 appendLine("=== Access Logs (last ${entries.size} of ${accessLog.size}) ===")
-                entries.forEach { appendLine(it.toLogString()) }
+                entries.forEach { entry: LogEntry -> appendLine(entry.toLogString()) }
             }
         }
     }
@@ -617,7 +617,7 @@ object WebServerApi {
             HttpResponse(statusCode, statusText, headers, body)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to serve file: ${file.path}", e)
-            simpleResponse(500, "Internal Server Error")
+            return simpleResponse(500, "Internal Server Error")
         }
     }
 

@@ -701,7 +701,7 @@ object ProcessMonitorApi {
             val uptime = readUptime()
 
             buildString {
-                appendLine("═══ TermX Process Monitor ═══  ${SimpleDateFormat("HH:mm:ss", Locale.US).format(Date())}")
+                appendLine("═══ TermX Process Monitor ═══  ${java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.US).format(java.util.Date())}")
                 appendLine("Mem: ${formatMemoryKB(usedMem)}/${formatMemoryKB(totalMem)} ($memPercent%)  " +
                     "Tasks: ${processes.size}  Uptime: $uptime" +
                     (loadAvg?.let { "  Load: ${"%.2f".format(it[0])}" } ?: ""))
@@ -798,15 +798,14 @@ object ProcessMonitorApi {
     private fun getCmdline(pid: Int): String? {
         val raw = readProcFileBytes("/proc/$pid/cmdline") ?: return null
         if (raw.isEmpty()) return null
-        return raw.joinToString(" ") { if (it == 0.toByte()) ' ' else it.toInt().toChar() }.trim()
+        return raw.joinToString(" ") { if (it == 0.toByte()) " " else it.toInt().toChar().toString() }.trim()
     }
-
     /**
      * Get environment variables from /proc/[pid]/environ.
      */
     private fun getEnviron(pid: Int): List<String> {
         val raw = readProcFileBytes("/proc/$pid/environ") ?: return emptyList()
-        return raw.joinToString("") { if (it == 0.toByte()) '\n' else it.toInt().toChar() }
+        return raw.joinToString("") { if (it == 0.toByte()) "\n" else it.toInt().toChar().toString() }
             .split("\n").filter { it.isNotBlank() }
     }
 

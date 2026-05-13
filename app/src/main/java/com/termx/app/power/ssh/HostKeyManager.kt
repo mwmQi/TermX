@@ -443,8 +443,8 @@ class HostKeyManager(private val context: Context) {
         // PKCS#8 wrapper for RSA:
         // SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL },
         //   OCTET STRING { <pkcs1-data> } }
-        val rsaOid = byteArrayOf(0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86,
-            0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00)
+        val rsaOid = byteArrayOf(0x30.toByte(), 0x0D.toByte(), 0x06.toByte(), 0x09.toByte(), 0x2A.toByte(), 0x86.toByte(), 0x48.toByte(), 0x86.toByte(),
+            0xF7.toByte(), 0x0D.toByte(), 0x01.toByte(), 0x01.toByte(), 0x01.toByte(), 0x05.toByte(), 0x00.toByte())
 
         val wrapped = ByteArrayOutputStream()
         wrapped.write(0x30) // SEQUENCE

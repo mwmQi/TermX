@@ -83,7 +83,7 @@ class FileBrowserActivity : AppCompatActivity() {
             val prefix = if (file.isDirectory) "/" else ""
             val suffix = if (file.isDirectory) "/" else ""
             val hidden = if (file.isHidden) "." else ""
-            val size = if (file.isFile) " (${formatSize(file.size)})" else ""
+            val size = if (file.isFile) " (${formatSize(file.length())})" else ""
             displayNames.add("$hidden${file.name}$suffix$size")
         }
 

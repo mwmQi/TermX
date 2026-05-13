@@ -57,7 +57,7 @@ object NfcApi {
     } catch (e: Exception) { Log.e(TAG, "NFC read failed", e); "Error: ${e.message}" }
 
     /** Write NDEF text message to tag. */
-    fun writeTag(tag: Tag, message: String): String = try {
+    fun writeTag(tag: Tag, message: String): String { return try {
         if (message.isBlank()) return "Error: Message empty"
         val ndef = Ndef.get(tag) ?: return "Error: Tag doesn't support NDEF. Tech: ${tag.techList.joinToString()}"
         try {
@@ -71,6 +71,7 @@ object NfcApi {
         catch (e: IOException) { "Error: I/O error - ${e.message}" }
         finally { try { ndef.close() } catch (_: IOException) {} }
     } catch (e: Exception) { Log.e(TAG, "NFC write failed", e); "Error: ${e.message}" }
+    }
 
     private fun parseNdefMessage(msg: NdefMessage): String = msg.records.joinToString(" | ") { parseNdefRecord(it) }
 

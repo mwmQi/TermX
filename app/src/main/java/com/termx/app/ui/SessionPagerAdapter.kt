@@ -11,17 +11,21 @@ import com.termx.app.session.SessionManager
  */
 class SessionPagerAdapter(
     activity: FragmentActivity,
-    private var sessions: List<SessionManager.SessionInfo> = emptyList()
+    private var sessions: List<SessionManager.SessionType> = emptyList()
 ) : FragmentStateAdapter(activity) {
 
     override fun getItemCount(): Int = sessions.size
 
     override fun createFragment(position: Int): Fragment {
-        val sessionId = sessions[position].id
+        val session = sessions[position]
+        val sessionId = when (session) {
+            is SessionManager.SessionType.Terminal -> session.id
+            is SessionManager.SessionType.Display -> "display_${session.displayNum}"
+        }
         return TerminalFragment.newInstance(sessionId)
     }
 
-    fun updateSessions(newSessions: List<SessionManager.SessionInfo>) {
+    fun updateSessions(newSessions: List<SessionManager.SessionType>) {
         val oldSize = sessions.size
         sessions = newSessions
         if (oldSize != newSessions.size) {
@@ -30,6 +34,11 @@ class SessionPagerAdapter(
     }
 
     fun getSessionId(position: Int): String? {
-        return if (position in sessions.indices) sessions[position].id else null
+        return if (position in sessions.indices) {
+            when (val session = sessions[position]) {
+                is SessionManager.SessionType.Terminal -> session.id
+                is SessionManager.SessionType.Display -> "display_${session.displayNum}"
+            }
+        } else null
     }
 }

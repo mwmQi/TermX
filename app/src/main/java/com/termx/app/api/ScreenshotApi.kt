@@ -43,15 +43,16 @@ object ScreenshotApi {
     fun hasProjectionPermission() = resultData != null && resultCode != 0
 
     /** Request MediaProjection permission (requires Activity context). */
-    fun requestPermission(context: Context): String = try {
+    fun requestPermission(context: Context): String { return try {
         if (context !is android.app.Activity) return "Error: Requires Activity context"
         val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         context.startActivityForResult(mgr.createScreenCaptureIntent(), 7001)
         "Permission request launched"
     } catch (e: Exception) { "Error: ${e.message}" }
+    }
 
     /** Take a screenshot of the entire display and save as PNG. */
-    fun takeScreenshot(context: Context, path: String): String = try {
+    fun takeScreenshot(context: Context, path: String): String { return try {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) return "Error: Requires API 21+"
         if (!hasProjectionPermission()) return "Error: MediaProjection permission not granted. Call requestPermission() first."
 
@@ -78,6 +79,7 @@ object ScreenshotApi {
         Log.i(TAG, "Screenshot saved: $path"); "Screenshot saved: $path (${file.length()}B, ${w}x${h})"
     } catch (e: SecurityException) { cleanup(); "Error: Permission denied or expired. Re-grant permission." }
     catch (e: Exception) { Log.e(TAG, "Screenshot failed", e); cleanup(); "Error: ${e.message}" }
+    }
 
     /** Take a screenshot of a specific area. */
     fun takeScreenshotArea(context: Context, path: String, x: Int, y: Int, cropW: Int, cropH: Int): String = try {

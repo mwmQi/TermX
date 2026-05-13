@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import java.io.*
 import java.net.*
+import java.security.SecureRandom
 import java.util.concurrent.*
 import javax.net.ssl.*
 

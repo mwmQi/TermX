@@ -434,7 +434,7 @@ class PtySession(
         } else {
             // Fallback: use Android's Process.sendSignal
             try {
-                val pid = fallbackProcess?.pid ?: return
+                val pid = fallbackProcess?.hashCode() ?: return
                 android.os.Process.sendSignal(pid, signal)
             } catch (e: Exception) {
                 Log.e(TAG, "Fallback signal failed", e)
@@ -464,7 +464,7 @@ class PtySession(
         return if (useNativePty && nativeHandle != 0L) {
             JniPty.nativeGetChildPid(nativeHandle)
         } else {
-            fallbackProcess?.pid ?: -1
+            fallbackProcess?.hashCode() ?: -1
         }
     }
 

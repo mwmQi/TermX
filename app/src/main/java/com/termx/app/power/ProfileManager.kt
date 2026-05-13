@@ -61,6 +61,7 @@ object ProfileManager {
     private const val KEY_SCROLLBACK = "scrollback_lines"
     private const val KEY_CREATED_AT = "created_at"
     private const val KEY_UPDATED_AT = "updated_at"
+    private const val KEY_IMPORTED_AT = "imported_at"
 
     // Default color themes
     private val THEMES = mapOf(
@@ -384,8 +385,8 @@ object ProfileManager {
         sb.appendLine("  Environment Variables:")
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null && envObj.length() > 0) {
-            val keys = envObj.keys().toList().sorted()
-            keys.forEach { key ->
+            val keys = envObj.keys().asSequence().toList().sorted()
+            keys.forEach { key: String ->
                 sb.appendLine("    $key=${envObj.getString(key)}")
             }
         } else {
@@ -397,8 +398,8 @@ object ProfileManager {
         sb.appendLine("  Aliases:")
         val aliasObj = profile.optJSONObject(KEY_ALIASES)
         if (aliasObj != null && aliasObj.length() > 0) {
-            val keys = aliasObj.keys().toList().sorted()
-            keys.forEach { key ->
+            val keys = aliasObj.keys().asSequence().toList().sorted()
+            keys.forEach { key: String ->
                 sb.appendLine("    alias $key='${aliasObj.getString(key)}'")
             }
         } else {
@@ -440,7 +441,7 @@ object ProfileManager {
         // Custom environment
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null) {
-            envObj.keys().toList().sorted().forEach { key ->
+            envObj.keys().asSequence().toList().sorted().forEach { key: String ->
                 sb.appendLine("  $key=${envObj.getString(key)}")
             }
         }
@@ -633,7 +634,7 @@ object ProfileManager {
         sb.appendLine("Aliases for profile '$name':")
         sb.appendLine("─".repeat(40))
 
-        aliasObj.keys().toList().sorted().forEach { alias ->
+        aliasObj.keys().asSequence().toList().sorted().forEach { alias: String ->
             sb.appendLine("  alias $alias='${aliasObj.getString(alias)}'")
         }
 
@@ -1026,7 +1027,7 @@ object ProfileManager {
         // Custom environment variables
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null) {
-            envObj.keys().forEach { key ->
+            envObj.keys().asSequence().forEach { key: String ->
                 env[key] = envObj.getString(key)
             }
         }

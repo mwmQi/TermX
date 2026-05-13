@@ -67,7 +67,7 @@ object ContactApi {
 
     /** Search contacts by name or phone. */
     @SuppressLint("MissingPermission")
-    fun searchContacts(context: Context, query: String): String = try {
+    fun searchContacts(context: Context, query: String): String { return try {
         if (query.isBlank()) return "Error: Search query required"
         val contacts = mutableListOf<ContactInfo>()
         context.contentResolver.query(
@@ -85,9 +85,10 @@ object ContactApi {
         else "=== Results for '$query' (${contacts.size}) ===\n" + contacts.joinToString("\n") { it.toFormattedString() }
     } catch (e: SecurityException) { "Error: READ_CONTACTS permission required" }
     catch (e: Exception) { "Error: ${e.message}" }
+    }
 
     /** Add a new contact with name, phone, and optional email. */
-    fun addContact(context: Context, name: String, phone: String, email: String? = null): String = try {
+    fun addContact(context: Context, name: String, phone: String, email: String? = null): String { return try {
         if (name.isBlank()) return "Error: Contact name required"
         val ops = arrayListOf<ContentProviderOperation>()
         ops.add(ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
@@ -111,6 +112,7 @@ object ContactApi {
         Log.i(TAG, "Contact added: $name"); "Contact added: $name"
     } catch (e: SecurityException) { "Error: WRITE_CONTACTS permission required" }
     catch (e: Exception) { Log.e(TAG, "Add contact failed", e); "Error: ${e.message}" }
+    }
 
     /** Delete contact by ID. */
     @SuppressLint("MissingPermission")

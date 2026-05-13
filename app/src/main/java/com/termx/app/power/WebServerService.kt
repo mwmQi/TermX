@@ -123,7 +123,7 @@ class WebServerService : Service() {
             // Start periodic notification updates
             startNotificationUpdates()
 
-            WakeLockManager.acquire(this, "TermX-WebServer")
+            WakeLockManager.acquirePartial(this)
             updateNotification()
 
         } catch (e: Exception) {
