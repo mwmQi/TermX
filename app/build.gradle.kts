@@ -15,6 +15,7 @@ android {
         versionName = "3.0.0-power"
 
         // NDK configuration for native PTY + X11 support
+        ndkVersion = "26.1.10909125"
         ndk {
             abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
         }
@@ -62,7 +63,7 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.18.1"
+            version = "3.22.1"
         }
     }
 

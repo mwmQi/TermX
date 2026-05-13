@@ -22,7 +22,7 @@ data class CronJob(
     /** Unique identifier for this job (used as AlarmManager request code). */
     val id: String,
 
-    /** The raw cron expression string (e.g. "*/5 * * * *" or "@hourly"). */
+    /** The raw cron expression string (e.g. "* /5 * * * *" or "@hourly"). */
     val expression: String,
 
     /** The shell command to execute when the job fires. */

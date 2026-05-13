@@ -19,7 +19,7 @@ import java.util.*
  *   *         Wildcard – matches every value
  *   5         Literal – matches exactly 5
  *   1-5       Range – matches 1,2,3,4,5
- *   */10      Step – every 10th value starting from the field minimum
+ *   * /10      Step – every 10th value starting from the field minimum
  *   1-15/3    Range with step – 1,4,7,10,13
  *   1,3,5     List – matches 1, 3, or 5
  *   1-5,10    Mixed – range and literal combined
@@ -190,7 +190,7 @@ class CronExpression private constructor(
         /**
          * Parse a single cron field string into a [CronField].
          *
-         * @param token   The raw field string (e.g. "1-5/2", "*/10", "1,3,5")
+         * @param token   The raw field string (e.g. "1-5/2", "* /10", "1,3,5")
          * @param min     Minimum valid value for the field
          * @param max     Maximum valid value for the field
          * @param nameMap Optional name-to-number mapping (months, weekdays)
@@ -207,7 +207,7 @@ class CronExpression private constructor(
             for (part in token.split(",")) {
                 val resolved = resolveName(part.trim(), nameMap)
 
-                // Check for step syntax (e.g. "*/5", "1-10/2")
+                // Check for step syntax (e.g. "* /5", "1-10/2")
                 val stepParts = resolved.split("/")
                 val rangeStr = stepParts[0]
                 val step = if (stepParts.size > 1) {

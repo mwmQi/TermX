@@ -47,7 +47,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * Shell usage:
  *   termx-cron list                     List all cron jobs
- *   termx-cron add "*/5 * * * * cmd"    Add a cron job
+ *   termx-cron add "* /5 * * * * cmd"    Add a cron job
  *   termx-cron remove <id>              Remove a cron job
  *   termx-cron enable <id>              Enable a cron job
  *   termx-cron disable <id>             Disable a cron job
@@ -161,7 +161,7 @@ class CronScheduler(private val context: Context) {
     /**
      * Add a new cron job.
      *
-     * @param expression  Cron expression string (e.g. "*/5 * * * *")
+     * @param expression  Cron expression string (e.g. "* /5 * * * *")
      * @param command     Shell command to execute
      * @param label       Optional human-readable label
      * @param logOutput   Whether to capture command output (default true)
@@ -667,7 +667,7 @@ class CronScheduler(private val context: Context) {
      *
      * Supported commands:
      *   list                          List all cron jobs
-     *   add "*/5 * * * * command"     Add a cron job
+     *   add "* /5 * * * * command"     Add a cron job
      *   remove <id>                   Remove a cron job
      *   enable <id>                   Enable a cron job
      *   disable <id>                  Disable a cron job
@@ -756,7 +756,7 @@ class CronScheduler(private val context: Context) {
     /**
      * Parse a full "expression command" string and add it as a job.
      * Handles both special shorthand (e.g. "@hourly cmd") and standard
-     * 5-field expressions (e.g. "*/5 * * * * cmd").
+     * 5-field expressions (e.g. "* /5 * * * * cmd").
      */
     private fun parseAndAddJob(input: String): String {
         val trimmed = input.trim()
@@ -846,7 +846,7 @@ Cron Expression Format:
   │ │ │ │ │
   * * * * * command
 
-  Field syntax: * | literal | range(1-5) | step(*/5) | list(1,3,5) | range-step(1-10/2)
+  Field syntax: * | literal | range(1-5) | step(* /5) | list(1,3,5) | range-step(1-10/2)
 
 Special strings:
   @hourly       Run once per hour
@@ -857,7 +857,7 @@ Special strings:
   @every_Nm     Run every N minutes
 
 Examples:
-  termx-cron add "*/5 * * * * echo hello"
+  termx-cron add "* /5 * * * * echo hello"
   termx-cron add "@hourly /path/to/backup.sh"
   termx-cron add "@every_10m ping -c 1 8.8.8.8"
   termx-cron add "0 2 * * * /path/to/cleanup.sh"

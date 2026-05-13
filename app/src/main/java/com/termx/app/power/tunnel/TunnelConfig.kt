@@ -105,7 +105,7 @@ data class TunnelConfig(
 ) {
 
     companion object {
-        private const val TAG = "TunnelConfig"
+        private val TAG = "TunnelConfig"
 
         // JSON field names
         private const val KEY_ID = "id"

@@ -132,7 +132,7 @@
         <activity
             android:name=".ui.floatwin.FloatingTerminal"
             android:label="TermX Floating"
-            android:theme="@style/Theme.TermX.Floating"
+            
             android:exported="false" />
 
         <!-- ===== Services ===== -->

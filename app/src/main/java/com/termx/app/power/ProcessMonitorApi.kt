@@ -86,7 +86,7 @@ object ProcessMonitorApi {
         val stateString: String get() = stateToText(state)
 
         companion object {
-            const val PAGE_SIZE = 4096L
+            val PAGE_SIZE = 4096L
 
             /**
              * Parse /proc/[pid]/stat content into a ProcessInfo object.
