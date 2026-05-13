@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary colors -->
+    <color name="background">#1E1E2E</color>
+    <color name="surface">#2A2B3C</color>
+    <color name="primary">#89B4FA</color>
+    <color name="primary_dark">#74C7EC</color>
+    <color name="accent">#F5C2E7</color>
+    <color name="text_primary">#CDD6F4</color>
+    <color name="text_secondary">#A6ADC8</color>
+    <color name="text_hint">#585B70</color>
+
+    <!-- Status colors -->
+    <color name="success">#A6E3A1</color>
+    <color name="warning">#F9E2AF</color>
+    <color name="error">#F38BA8</color>
+    <color name="info">#89DCEB</color>
+
+    <!-- UI elements -->
+    <color name="divider">#3E4452</color>
+    <color name="ripple">#1AFFFFFF</color>
+    <color name="toolbar_background">#181825</color>
+    <color name="extra_keys_background">#1E1E2E</color>
+    <color name="extra_keys_key">#2A2B3C</color>
+    <color name="extra_keys_key_pressed">#4A4B6C</color>
+    <color name="extra_keys_text">#D4BE98</color>
+</resources>

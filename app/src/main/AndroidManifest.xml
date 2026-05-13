@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Core permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
+    <!-- Network permissions -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <!-- Telephony permissions -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" />
+
+    <!-- Media permissions -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Overlay permission (for floating terminal) -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Sensor permission -->
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
+    <uses-permission android:name="android.permission.HIGH_SAMPLING_RATE_SENSORS"
+        tools:ignore="HighSamplingRate" />
+
+    <!-- Download -->
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+
+    <!-- Biometric -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <!-- NFC -->
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+
+    <!-- Install packages -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
+
+    <!-- Bluetooth permissions -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+
+    <!-- USB permissions -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+
+    <!-- Screen recording / Media projection -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+    <application
+        android:name=".TermXApp"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.TermX"
+        android:requestLegacyExternalStorage="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <!-- ===== Activities ===== -->
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/x-shellscript" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:label="@string/settings_title"
+            android:parentActivityName=".MainActivity" />
+
+        <activity
+            android:name=".ui.FileBrowserActivity"
+            android:label="@string/file_browser_title"
+            android:parentActivityName=".MainActivity" />
+
+        <!-- X11 Display Activity -->
+        <activity
+            android:name=".x11.X11DisplayActivity"
+            android:label="TermX Display"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden"
+            android:exported="false" />
+
+        <!-- Floating Terminal Activity -->
+        <activity
+            android:name=".ui.floatwin.FloatingTerminal"
+            android:label="TermX Floating"
+            android:theme="@style/Theme.TermX.Floating"
+            android:exported="false" />
+
+        <!-- ===== Services ===== -->
+
+        <!-- Terminal foreground service -->
+        <service
+            android:name=".power.TerminalService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- SSH Server service -->
+        <service
+            android:name=".power.ssh.SshServerService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- Cron Scheduler service -->
+        <service
+            android:name=".power.cron.CronSchedulerService"
+            android:foregroundServiceType="dataSync|specialUse"
+            android:exported="false" />
+
+        <!-- Screen Recorder service -->
+        <service
+            android:name=".power.ScreenRecorderService"
+            android:foregroundServiceType="mediaProjection"
+            android:exported="false" />
+
+        <!-- Web Server service -->
+        <service
+            android:name=".power.WebServerService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
+        <!-- ===== Broadcast Receivers ===== -->
+
+        <!-- TermX API receiver — handles all API commands -->
+        <receiver
+            android:name=".api.TermXApiReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.termx.app.api.OPEN_URL" />
+                <action android:name="com.termx.app.api.OPEN_FILE" />
+                <action android:name="com.termx.app.api.SHARE_TEXT" />
+                <action android:name="com.termx.app.api.CLIPBOARD_GET" />
+                <action android:name="com.termx.app.api.CLIPBOARD_SET" />
+                <action android:name="com.termx.app.api.TOAST" />
+                <action android:name="com.termx.app.api.VIBRATE" />
+                <action android:name="com.termx.app.api.NOTIFY" />
+                <action android:name="com.termx.app.api.DIALOG" />
+                <action android:name="com.termx.app.api.SETUP_STORAGE" />
+                <action android:name="com.termx.app.api.STORAGE_INFO" />
+                <action android:name="com.termx.app.api.BATTERY_INFO" />
+                <action android:name="com.termx.app.api.WIFI_INFO" />
+                <action android:name="com.termx.app.api.LOCATION" />
+                <action android:name="com.termx.app.api.SENSOR_INFO" />
+                <action android:name="com.termx.app.api.SENSOR_READ" />
+                <action android:name="com.termx.app.api.TELEPHONY_INFO" />
+                <action android:name="com.termx.app.api.MEDIA_PLAYER" />
+                <action android:name="com.termx.app.api.DOWNLOAD" />
+                <action android:name="com.termx.app.api.VOLUME" />
+                <action android:name="com.termx.app.api.TTS" />
+                <action android:name="com.termx.app.api.WIFI_ENABLE" />
+                <action android:name="com.termx.app.api.WIFI_SCAN" />
+                <action android:name="com.termx.app.api.HELP" />
+                <!-- Package Manager actions -->
+                <action android:name="com.termx.app.api.PKG_INSTALL" />
+                <action android:name="com.termx.app.api.PKG_UNINSTALL" />
+                <action android:name="com.termx.app.api.PKG_UPDATE" />
+                <action android:name="com.termx.app.api.PKG_UPGRADE" />
+                <action android:name="com.termx.app.api.PKG_SEARCH" />
+                <action android:name="com.termx.app.api.PKG_SHOW" />
+                <action android:name="com.termx.app.api.PKG_UPGRADABLE" />
+                <action android:name="com.termx.app.api.PKG_CLEAN" />
+                <action android:name="com.termx.app.api.RELOAD_SETTINGS" />
+                <!-- X11 Display actions -->
+                <action android:name="com.termx.app.api.X11_DISPLAY" />
+                <action android:name="com.termx.app.api.X11_VNC" />
+                <!-- Priority 3 API actions -->
+                <action android:name="com.termx.app.api.CAMERA" />
+                <action android:name="com.termx.app.api.SMS" />
+                <action android:name="com.termx.app.api.FINGERPRINT" />
+                <action android:name="com.termx.app.api.CONTACT" />
+                <action android:name="com.termx.app.api.STT" />
+                <action android:name="com.termx.app.api.NFC" />
+                <action android:name="com.termx.app.api.BATTERY" />
+                <action android:name="com.termx.app.api.NOTIFICATION" />
+                <action android:name="com.termx.app.api.FILE_PICKER" />
+                <action android:name="com.termx.app.api.SCREENSHOT" />
+                <action android:name="com.termx.app.api.APP" />
+                <!-- Power Feature actions -->
+                <action android:name="com.termx.app.api.SSH" />
+                <action android:name="com.termx.app.api.CRON" />
+                <action android:name="com.termx.app.api.TUNNEL" />
+                <action android:name="com.termx.app.api.BLUETOOTH" />
+                <action android:name="com.termx.app.api.USB_SERIAL" />
+                <action android:name="com.termx.app.api.WEB_SERVER" />
+                <action android:name="com.termx.app.api.PROCESS" />
+                <action android:name="com.termx.app.api.FLASHLIGHT" />
+                <action android:name="com.termx.app.api.CALL_LOG" />
+                <action android:name="com.termx.app.api.SCREEN_RECORD" />
+                <action android:name="com.termx.app.api.MACRO" />
+                <action android:name="com.termx.app.api.INTENT" />
+                <action android:name="com.termx.app.api.ENCRYPTION" />
+                <action android:name="com.termx.app.api.NET_TOOLS" />
+                <action android:name="com.termx.app.api.PROFILE" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot receiver — restores cron jobs, SSH server, etc. -->
+        <receiver
+            android:name=".receiver.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Cron alarm receiver — fires scheduled cron jobs -->
+        <receiver
+            android:name=".power.cron.CronReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.termx.app.CRON_FIRE" />
+                <action android:name="com.termx.app.CRON_BOOT" />
+                <action android:name="com.termx.app.CRON_RUN_NOW" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Share receiver -->
+        <receiver
+            android:name=".receiver.ShareReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </receiver>
+
+        <!-- RUN_COMMAND receiver (Tasker integration) -->
+        <receiver
+            android:name=".receiver.RunCommandReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="com.termx.app.RUN_COMMAND" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Widget -->
+        <receiver
+            android:name=".receiver.TermXWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_info" />
+        </receiver>
+
+        <!-- USB device attached receiver -->
+        <receiver
+            android:name=".power.UsbAttachReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+                <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- File Provider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

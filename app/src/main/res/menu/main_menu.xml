@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_new_session"
+        android:title="@string/menu_new_session"
+        android:icon="@android:drawable/ic_menu_add"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_sessions"
+        android:title="@string/menu_sessions"
+        android:icon="@android:drawable/ic_menu_agenda"
+        app:showAsAction="ifRoom" />
+
+    <!-- Display group -->
+    <item
+        android:id="@+id/action_fullscreen"
+        android:title="Fullscreen"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_float"
+        android:title="Floating Terminal"
+        app:showAsAction="never" />
+
+    <!-- Storage & Power group -->
+    <item
+        android:id="@+id/action_storage_setup"
+        android:title="@string/menu_setup_storage"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_wake_lock"
+        android:title="@string/menu_wake_lock"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_open_url"
+        android:title="@string/menu_open_url"
+        app:showAsAction="never" />
+
+    <!-- Session group -->
+    <item
+        android:id="@+id/action_rename_session"
+        android:title="Rename Session"
+        app:showAsAction="never" />
+
+    <!-- Edit group -->
+    <item
+        android:id="@+id/action_copy"
+        android:title="@string/menu_copy"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_paste"
+        android:title="@string/menu_paste"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_font_increase"
+        android:title="@string/menu_font_increase"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_font_decrease"
+        android:title="@string/menu_font_decrease"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_toggle_extra_keys"
+        android:title="@string/menu_toggle_extra_keys"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_system_info"
+        android:title="@string/menu_system_info"
+        app:showAsAction="never" />
+
+    <!-- X11 Display -->
+    <item
+        android:id="@+id/action_x11_display"
+        android:title="Virtual Display (X11)"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_settings"
+        android:title="@string/menu_settings"
+        android:icon="@android:drawable/ic_menu_preferences"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/action_exit"
+        android:title="@string/menu_exit"
+        app:showAsAction="never" />
+
+</menu>
