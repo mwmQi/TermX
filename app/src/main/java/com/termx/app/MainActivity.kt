@@ -47,6 +47,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var properties: TermXProperties
 
     private var terminalView: TerminalView? = null
+    private var displayView: com.termx.app.x11.X11DisplayView? = null
     private var currentColors: TerminalColors = TerminalColors.catppuccinMocha()
     private var tabAdapter: SessionTabAdapter? = null
 
@@ -171,7 +172,7 @@ class MainActivity : AppCompatActivity() {
                         }
                         is SessionManager.SessionType.Display -> {
                             sessionManager.switchToDisplay(session.displayNum)
-                            openDisplayViewer(session.displayNum)
+                            attachToDisplaySession(session)
                         }
                     }
                 }
@@ -242,17 +243,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupTerminal() {
-        terminalView = TerminalView(this).apply {
-            colors = currentColors
-            setFontSize(prefs.fontSize)
-        }
-
-        // Apply custom font
-        val typeface = FontManager.getTypeface(this)
-        terminalView?.let { tv ->
-            // Font will be applied through TerminalView's paint
-        }
-
         // Apply terminal margins
         val density = resources.displayMetrics.density
         binding.terminalContainer.setPadding(
@@ -263,19 +253,10 @@ class MainActivity : AppCompatActivity() {
         )
 
         binding.terminalContainer.visibility = View.VISIBLE
-
-        binding.terminalContainer.removeAllViews()
-        binding.terminalContainer.addView(
-            terminalView,
-            FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-        )
     }
 
     private fun setupExtraKeys() {
-        binding.extraKeys.setTerminalView(terminalView!!)
+        terminalView?.let { binding.extraKeys.setTerminalView(it) }
         binding.extraKeys.visibility = if (prefs.showExtraKeys) View.VISIBLE else View.GONE
     }
 
@@ -316,8 +297,27 @@ class MainActivity : AppCompatActivity() {
     private fun attachToTerminalSession(info: SessionManager.SessionType.Terminal?) {
         if (info == null) return
 
-        // Show terminal, hide any display placeholder
+        // Stop X11 rendering if active
+        displayView?.stopRendering()
+        
+        // Show terminal, hide any display
         binding.terminalContainer.visibility = View.VISIBLE
+        binding.terminalContainer.removeAllViews()
+        
+        if (terminalView == null) {
+            terminalView = TerminalView(this).apply {
+                colors = currentColors
+                setFontSize(prefs.fontSize)
+            }
+        }
+        
+        binding.terminalContainer.addView(
+            terminalView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
 
         terminalView?.apply {
             buffer = info.buffer
@@ -381,6 +381,47 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
+     * Attach to an X11 display session.
+     */
+    private fun attachToDisplaySession(session: SessionManager.SessionType.Display?) {
+        if (session == null) return
+
+        val info = X11Manager.getDisplayInfo(session.displayNum) ?: return
+
+        // Stop other renderings
+        displayView?.stopRendering()
+
+        // Show display container, hide terminal
+        binding.terminalContainer.visibility = View.VISIBLE
+        binding.terminalContainer.removeAllViews()
+
+        if (displayView == null) {
+            displayView = com.termx.app.x11.X11DisplayView(this)
+        }
+
+        displayView?.apply {
+            initDisplay(
+                session.displayNum,
+                info.nativeHandle != 0L,
+                info.nativeHandle,
+                info.kotlinServer
+            )
+        }
+
+        binding.terminalContainer.addView(
+            displayView,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        displayView?.startRendering()
+        
+        updateTitle()
+    }
+
+    /**
      * Attach to whatever the active session is.
      */
     private fun attachToActiveSession() {
@@ -389,7 +430,7 @@ class MainActivity : AppCompatActivity() {
                 attachToTerminalSession(sessionManager.activeSession)
             }
             SessionManager.SessionKind.DISPLAY -> {
-                sessionManager.currentDisplayNum?.let { openDisplayViewer(it) }
+                attachToDisplaySession(sessionManager.activeDisplaySession)
             }
         }
     }
@@ -398,10 +439,17 @@ class MainActivity : AppCompatActivity() {
      * Open the X11 display viewer for a specific display number.
      */
     private fun openDisplayViewer(displayNum: Int) {
-        if (X11Manager.isDisplayRunning(displayNum)) {
-            X11DisplayActivity.start(this, displayNum)
+        val session = sessionManager.getDisplaySession(displayNum)
+        if (session != null) {
+            attachToDisplaySession(session)
+            refreshTabs()
         } else {
-            Toast.makeText(this, "Display :$displayNum is not running", Toast.LENGTH_SHORT).show()
+            // Fallback to separate activity if session not found in manager
+            if (X11Manager.isDisplayRunning(displayNum)) {
+                X11DisplayActivity.start(this, displayNum)
+            } else {
+                Toast.makeText(this, "Display :$displayNum is not running", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -823,6 +871,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         terminalView?.resume()
+        displayView?.startRendering()
 
         // Reload properties in case they changed
         properties.load()
@@ -841,6 +890,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         terminalView?.pause()
+        displayView?.stopRendering()
     }
 
     override fun onDestroy() {

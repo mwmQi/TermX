@@ -45,10 +45,11 @@ class SessionManager private constructor(private val context: Context) {
     sealed class SessionType {
         data class Terminal(
             val id: String,
+            val number: Int,
             val session: TerminalSession,
             val buffer: TerminalBuffer,
             val emulator: TerminalEmulator,
-            var title: String = "Terminal",
+            var title: String = "Terminal $number",
             var createdAt: Long = System.currentTimeMillis(),
             var onUpdate: (() -> Unit)? = null
         ) : SessionType()
@@ -70,8 +71,6 @@ class SessionManager private constructor(private val context: Context) {
     // Global ordering — all sessions (terminal + display) in creation order
     private val sessionOrder = mutableListOf<Any>()  // String (terminal ID) or Int (display num)
 
-    private var sessionCounter = 0
-
     // Active session tracking
     private var activeSessionType: SessionKind = SessionKind.TERMINAL
     private var activeDisplayNum: Int? = null
@@ -88,14 +87,12 @@ class SessionManager private constructor(private val context: Context) {
     val activeSessionCount: Int
         get() = terminalSessions.size + displaySessions.size
 
-    /** Get all sessions in order (terminals + displays) */
+    /** Get all sessions in order (terminals first, then displays) */
     val allSessions: List<SessionType>
-        get() = sessionOrder.mapNotNull { key ->
-            when (key) {
-                is String -> terminalSessions[key]
-                is Int -> displaySessions[key]
-                else -> null
-            }
+        get() {
+            val terminals = terminalSessions.values.toList().sortedBy { it.createdAt }
+            val displays = displaySessions.values.toList().sortedBy { it.displayNum }
+            return terminals + displays
         }
 
     /** Get all terminal sessions */
@@ -115,22 +112,31 @@ class SessionManager private constructor(private val context: Context) {
     var onSessionChanged: ((SessionType?) -> Unit)? = null
     var onSessionListChanged: (() -> Unit)? = null
 
+    private fun getNextSessionNumber(): Int {
+        val used = terminalSessions.values.map { it.number }.toSet()
+        var n = 1
+        while (n in used) n++
+        return n
+    }
+
     fun createSession(
         shellPath: String = "/system/bin/sh",
         cwd: String = "/data/data/com.termx.app/files",
         colors: TerminalColors = TerminalColors.catppuccinMocha()
     ): SessionType.Terminal {
-        val id = "session_${++sessionCounter}_${System.currentTimeMillis()}"
+        val num = getNextSessionNumber()
+        val id = "session_${num}_${System.currentTimeMillis()}"
         val buffer = TerminalBuffer(columns = 80, rows = 24)
         val session = TerminalSession(shellPath = shellPath, cwd = cwd)
         val emulator = TerminalEmulator(buffer, colors)
 
         val info = SessionType.Terminal(
             id = id,
+            number = num,
             session = session,
             buffer = buffer,
             emulator = emulator,
-            title = "Terminal $sessionCounter"
+            title = "Terminal $num"
         )
 
         // Wire up session output to emulator

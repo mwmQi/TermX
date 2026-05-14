@@ -171,16 +171,21 @@ class TerminalView @JvmOverloads constructor(
             val y = paddingTopPx + screenRow * cellHeight
 
             // Get the line data
-            val cells: Array<TerminalCell> = if (scrollbackRow < 0) {
-                // Regular screen buffer
-                buffer.getCell(screenRow, 0).let { _ ->
+            val cells: Array<TerminalCell> = when {
+                scrollbackRow < 0 -> {
+                    // Capped scrollback fallback
                     Array(buffer.columns) { col -> buffer.getCell(screenRow, col) }
                 }
-            } else if (scrollbackRow < buffer.scrollbackSize) {
-                // Scrollback line
-                buffer.getScrollbackLine(scrollbackRow) ?: continue
-            } else {
-                continue
+                scrollbackRow < buffer.scrollbackSize -> {
+                    // Scrollback line
+                    buffer.getScrollbackLine(scrollbackRow) ?: continue
+                }
+                else -> {
+                    // Regular screen buffer
+                    val actualRow = scrollbackRow - buffer.scrollbackSize
+                    if (actualRow >= buffer.rows) continue
+                    Array(buffer.columns) { col -> buffer.getCell(actualRow, col) }
+                }
             }
 
             // Draw backgrounds first (for colored backgrounds)
@@ -188,7 +193,9 @@ class TerminalView @JvmOverloads constructor(
             var currentBgColor = colors.background
             for (col in 0 until cells.size) {
                 val cell = if (col < cells.size) cells[col] else TerminalCell()
-                val cellBg = if (cell.inverse) cell.fgColor else cell.bgColor
+                var cellBg = if (cell.inverse) cell.fgColor else cell.bgColor
+                if (cellBg == 0) cellBg = if (cell.inverse) colors.foreground else colors.background
+
                 if (cellBg != currentBgColor || col == cells.size - 1) {
                     if (bgRunStart >= 0 && currentBgColor != colors.background) {
                         val x1 = paddingLeftPx + bgRunStart * cellWidth
@@ -213,14 +220,16 @@ class TerminalView @JvmOverloads constructor(
                     val x = paddingLeftPx + col * cellWidth
 
                     // Determine color
-                    val fg = if (cell.inverse) cell.bgColor else cell.fgColor
+                    var fg = if (cell.inverse) cell.bgColor else cell.fgColor
+                    if (fg == 0) fg = if (cell.inverse) colors.background else colors.foreground
+
                     textPaint.color = fg
                     textPaint.isFakeBoldText = cell.bold
                     textPaint.isUnderlineText = cell.underline
                     textPaint.isStrikeThruText = cell.strikethrough
                     textPaint.textSkewX = if (cell.italic) -0.2f else 0f
 
-                    val textY = y + charHeight - textPaint.fontMetrics.descent
+                    val textY = y + cellHeight - textPaint.fontMetrics.descent
                     canvas.drawText(cell.char.toString(), x, textY, textPaint)
                 }
             }
@@ -243,7 +252,7 @@ class TerminalView @JvmOverloads constructor(
             val cell = buffer.getCell(buffer.cursorRow, buffer.cursorCol)
             if (cell.char != ' ' && cell.char != '\u0000') {
                 textPaint.color = colors.background
-                val textY = cursorY + charHeight - textPaint.fontMetrics.descent
+                val textY = cursorY + cellHeight - textPaint.fontMetrics.descent
                 canvas.drawText(cell.char.toString(), cursorX, textY, textPaint)
             }
         }
