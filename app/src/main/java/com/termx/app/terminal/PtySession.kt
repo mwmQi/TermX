@@ -434,11 +434,7 @@ class PtySession(
         } else {
             // Fallback: use Android's Process.sendSignal
             try {
-<<<<<<< HEAD
-                val pid = fallbackProcess?.hashCode() ?: return
-=======
                 val pid = getFallbackPid() ?: return
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 android.os.Process.sendSignal(pid, signal)
             } catch (e: Exception) {
                 Log.e(TAG, "Fallback signal failed", e)
@@ -468,9 +464,6 @@ class PtySession(
         return if (useNativePty && nativeHandle != 0L) {
             JniPty.nativeGetChildPid(nativeHandle)
         } else {
-<<<<<<< HEAD
-            fallbackProcess?.hashCode() ?: -1
-=======
             getFallbackPid() ?: -1
         }
     }
@@ -496,7 +489,6 @@ class PtySession(
                 Log.w(TAG, "Could not get fallback process PID", e)
                 null
             }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
         }
     }
 

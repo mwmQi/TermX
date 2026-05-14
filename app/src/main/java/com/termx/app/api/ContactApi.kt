@@ -84,12 +84,7 @@ object ContactApi {
         if (contacts.isEmpty()) "No contacts matching '$query'"
         else "=== Results for '$query' (${contacts.size}) ===\n" + contacts.joinToString("\n") { it.toFormattedString() }
     } catch (e: SecurityException) { "Error: READ_CONTACTS permission required" }
-<<<<<<< HEAD
-    catch (e: Exception) { "Error: ${e.message}" }
-    }
-=======
     catch (e: Exception) { "Error: ${e.message}" } }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Add a new contact with name, phone, and optional email. */
     fun addContact(context: Context, name: String, phone: String, email: String? = null): String { return try {
@@ -115,12 +110,7 @@ object ContactApi {
         context.contentResolver.applyBatch(ContactsContract.AUTHORITY, ops)
         Log.i(TAG, "Contact added: $name"); "Contact added: $name"
     } catch (e: SecurityException) { "Error: WRITE_CONTACTS permission required" }
-<<<<<<< HEAD
-    catch (e: Exception) { Log.e(TAG, "Add contact failed", e); "Error: ${e.message}" }
-    }
-=======
     catch (e: Exception) { Log.e(TAG, "Add contact failed", e); "Error: ${e.message}" } }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Delete contact by ID. */
     @SuppressLint("MissingPermission")

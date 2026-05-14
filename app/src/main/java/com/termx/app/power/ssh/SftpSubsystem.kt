@@ -1168,21 +1168,12 @@ class SftpSubsystem(private val context: Context) {
 
             var line: String?
             while (reader.readLine().also { line = it } != null) {
-<<<<<<< HEAD
-                val localLine = line!!
-
-                when {
-                    // C0755 size filename — create file
-                    localLine.startsWith("C") -> {
-                        val fileParts = localLine.substring(1).split("\\s+".toRegex(), 3)
-=======
                 val currentLine = line!!
 
                 when {
                     // C0755 size filename — create file
                     currentLine.startsWith("C") -> {
                         val fileParts = currentLine.substring(1).split("\\s+".toRegex(), 3)
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                         if (fileParts.size < 3) {
                             writer.write(1)
                             continue
@@ -1216,13 +1207,8 @@ class SftpSubsystem(private val context: Context) {
                         writer.write(0) // Acknowledge completion
                     }
                     // D0755 0 dirname — create directory
-<<<<<<< HEAD
-                    localLine.startsWith("D") -> {
-                        val dirParts = localLine.substring(1).split("\\s+".toRegex(), 3)
-=======
                     currentLine.startsWith("D") -> {
                         val dirParts = currentLine.substring(1).split("\\s+".toRegex(), 3)
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                         if (dirParts.size >= 3) {
                             val dirName = dirParts[2]
                             val dirPath = "$path/$dirName"
@@ -1231,20 +1217,12 @@ class SftpSubsystem(private val context: Context) {
                         writer.write(0)
                     }
                     // E — end of directory
-<<<<<<< HEAD
-                    localLine == "E" -> {
-=======
                     currentLine == "E" -> {
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                         writer.write(0)
                         break
                     }
                     // T — timestamp (acknowledge and skip)
-<<<<<<< HEAD
-                    localLine.startsWith("T") -> {
-=======
                     currentLine.startsWith("T") -> {
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                         writer.write(0)
                     }
                     else -> {

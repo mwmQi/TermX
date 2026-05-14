@@ -83,8 +83,8 @@ class FileBrowserActivity : AppCompatActivity() {
             val prefix = if (file.isDirectory) "/" else ""
             val suffix = if (file.isDirectory) "/" else ""
             val hidden = if (file.isHidden) "." else ""
-            val size = if (file.isFile) " (${formatSize(file.length())})" else ""
-            displayNames.add("$hidden${file.name}$suffix$size")
+            val sizeStr = if (!file.isDirectory) " (${formatSize(file.size)})" else ""
+            displayNames.add("$hidden${file.name}$suffix$sizeStr")
         }
 
         adapter = ArrayAdapter(this, android.R.layout.simple_list_item_1, displayNames)

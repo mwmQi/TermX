@@ -41,12 +41,7 @@ object SmsApi {
         else smsManager.sendTextMessage(destination, null, message, null, null)
         Log.i(TAG, "SMS sent to $destination"); "SMS sent to $destination (${message.length} chars)"
     } catch (e: SecurityException) { "Error: SEND_SMS permission required" }
-<<<<<<< HEAD
-    catch (e: Exception) { Log.e(TAG, "SMS send failed", e); "Error: ${e.message}" }
-    }
-=======
     catch (e: Exception) { Log.e(TAG, "SMS send failed", e); "Error: ${e.message}" } }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Read SMS inbox messages. */
     @SuppressLint("MissingPermission")

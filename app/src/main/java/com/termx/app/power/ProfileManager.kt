@@ -385,13 +385,8 @@ object ProfileManager {
         sb.appendLine("  Environment Variables:")
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null && envObj.length() > 0) {
-<<<<<<< HEAD
-            val keys = envObj.keys().asSequence().toList().sorted()
-            keys.forEach { key: String ->
-=======
             val keys = Iterable { envObj.keys() }.toList().sorted()
             keys.forEach { key ->
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 sb.appendLine("    $key=${envObj.getString(key)}")
             }
         } else {
@@ -403,13 +398,8 @@ object ProfileManager {
         sb.appendLine("  Aliases:")
         val aliasObj = profile.optJSONObject(KEY_ALIASES)
         if (aliasObj != null && aliasObj.length() > 0) {
-<<<<<<< HEAD
-            val keys = aliasObj.keys().asSequence().toList().sorted()
-            keys.forEach { key: String ->
-=======
             val keys = Iterable { aliasObj.keys() }.toList().sorted()
             keys.forEach { key ->
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 sb.appendLine("    alias $key='${aliasObj.getString(key)}'")
             }
         } else {
@@ -451,11 +441,7 @@ object ProfileManager {
         // Custom environment
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null) {
-<<<<<<< HEAD
-            envObj.keys().asSequence().toList().sorted().forEach { key: String ->
-=======
             Iterable { envObj.keys() }.toList().sorted().forEach { key ->
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 sb.appendLine("  $key=${envObj.getString(key)}")
             }
         }
@@ -648,11 +634,7 @@ object ProfileManager {
         sb.appendLine("Aliases for profile '$name':")
         sb.appendLine("─".repeat(40))
 
-<<<<<<< HEAD
-        aliasObj.keys().asSequence().toList().sorted().forEach { alias: String ->
-=======
         Iterable { aliasObj.keys() }.toList().sorted().forEach { alias ->
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
             sb.appendLine("  alias $alias='${aliasObj.getString(alias)}'")
         }
 
@@ -1045,11 +1027,7 @@ object ProfileManager {
         // Custom environment variables
         val envObj = profile.optJSONObject(KEY_ENV)
         if (envObj != null) {
-<<<<<<< HEAD
-            envObj.keys().asSequence().forEach { key: String ->
-=======
             Iterable { envObj.keys() }.forEach { key ->
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 env[key] = envObj.getString(key)
             }
         }

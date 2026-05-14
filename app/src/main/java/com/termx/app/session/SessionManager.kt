@@ -49,7 +49,8 @@ class SessionManager private constructor(private val context: Context) {
             val buffer: TerminalBuffer,
             val emulator: TerminalEmulator,
             var title: String = "Terminal",
-            var createdAt: Long = System.currentTimeMillis()
+            var createdAt: Long = System.currentTimeMillis(),
+            var onUpdate: (() -> Unit)? = null
         ) : SessionType()
 
         data class Display(
@@ -124,33 +125,6 @@ class SessionManager private constructor(private val context: Context) {
         val session = TerminalSession(shellPath = shellPath, cwd = cwd)
         val emulator = TerminalEmulator(buffer, colors)
 
-        // Wire up session output to emulator
-        session.onOutput = { data ->
-            emulator.process(data)
-        }
-
-        // Title change from OSC escape sequences
-        session.onTitleChanged = { title ->
-            val info = terminalSessions[id]
-            if (info != null) {
-                info.title = title
-                onSessionListChanged?.invoke()
-            }
-        }
-
-        // Also wire emulator title callback
-        emulator.onTitleChanged = { title ->
-            val info = terminalSessions[id]
-            if (info != null) {
-                info.title = title
-                onSessionListChanged?.invoke()
-            }
-        }
-
-        session.onExit = { exitCode ->
-            removeSession(id)
-        }
-
         val info = SessionType.Terminal(
             id = id,
             session = session,
@@ -158,6 +132,34 @@ class SessionManager private constructor(private val context: Context) {
             emulator = emulator,
             title = "Terminal $sessionCounter"
         )
+
+        // Wire up session output to emulator
+        session.onOutput = { data ->
+            emulator.process(data)
+            info.onUpdate?.invoke()
+        }
+
+        // Title change from OSC escape sequences
+        session.onTitleChanged = { title ->
+            val terminalInfo = terminalSessions[id]
+            if (terminalInfo != null) {
+                terminalInfo.title = title
+                onSessionListChanged?.invoke()
+            }
+        }
+
+        // Also wire emulator title callback
+        emulator.onTitleChanged = { title ->
+            val terminalInfo = terminalSessions[id]
+            if (terminalInfo != null) {
+                terminalInfo.title = title
+                onSessionListChanged?.invoke()
+            }
+        }
+
+        session.onExit = { exitCode ->
+            removeSession(id)
+        }
 
         terminalSessions[id] = info
         sessionOrder.add(id)

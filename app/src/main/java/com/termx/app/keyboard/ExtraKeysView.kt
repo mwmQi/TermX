@@ -170,11 +170,7 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#6C7086"))
                             }
-<<<<<<< HEAD
-                            (v as? android.widget.TextView)?.setTextColor(Color.WHITE)
-=======
                             tv.setTextColor(Color.WHITE)
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                             true
                         }
                         MotionEvent.ACTION_UP -> {
@@ -188,11 +184,7 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
-<<<<<<< HEAD
-                            (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
-=======
                             tv.setTextColor(Color.parseColor("#D4BE98"))
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
                             handleKeyPress(key)
                             true
@@ -203,11 +195,7 @@ class ExtraKeysView @JvmOverloads constructor(
                                 cornerRadius = 4 * density
                                 setStroke(1, Color.parseColor("#3E4452"))
                             }
-<<<<<<< HEAD
-                            (v as? android.widget.TextView)?.setTextColor(Color.parseColor("#D4BE98"))
-=======
                             tv.setTextColor(Color.parseColor("#D4BE98"))
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                             true
                         }
                         else -> false

@@ -65,6 +65,9 @@ class TerminalSession(
         if (isRunning) return
 
         try {
+            // Ensure working directory exists
+            try { java.io.File(cwd).mkdirs() } catch (_: Exception) {}
+            
             ptySession.start()
             isRunning = true
 

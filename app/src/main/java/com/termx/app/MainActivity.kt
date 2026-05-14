@@ -27,6 +27,7 @@ import com.termx.app.utils.FontManager
 import com.termx.app.utils.FullscreenManager
 import com.termx.app.utils.PreferenceManager
 import com.termx.app.utils.ShellUtils
+import com.termx.app.pkg.TermXPackageManager
 import com.termx.app.x11.DisplayInfo
 import com.termx.app.x11.X11DisplayActivity
 import com.termx.app.x11.X11Manager
@@ -103,6 +104,13 @@ class MainActivity : AppCompatActivity() {
         // Auto-setup storage
         if (!StorageSetup.isStorageSetup(this) && StorageSetup.hasStoragePermission(this)) {
             StorageSetup.setupStorage(this)
+        }
+
+        // Initialize package manager (creates prefix dirs, loads db)
+        try {
+            TermXPackageManager(this).init()
+        } catch (e: Exception) {
+            android.util.Log.e("TermX", "Package manager init failed", e)
         }
     }
 
@@ -319,6 +327,38 @@ class MainActivity : AppCompatActivity() {
             setFontSize(prefs.fontSize)
         }
 
+        // CRITICAL: Wire session output to emulator and view
+        // This must be set here because the emulator needs to process raw bytes
+        // from the PTY into terminal buffer changes, then the view redraws
+        info.session.onOutput = { data ->
+            info.emulator.process(data)
+            runOnUiThread {
+                terminalView?.invalidate()
+            }
+        }
+
+        info.session.onError = { data ->
+            info.emulator.process(data)
+            runOnUiThread {
+                terminalView?.invalidate()
+            }
+        }
+
+        info.session.onExit = { exitCode ->
+            runOnUiThread {
+                val msg = if (exitCode == 0) "Process exited" else "Process exited with code $exitCode"
+                info.emulator.process("\r\n[$msg]\r\n".toByteArray())
+                terminalView?.invalidate()
+            }
+        }
+
+        // Handle updates from session output
+        info.onUpdate = {
+            runOnUiThread {
+                terminalView?.invalidate()
+            }
+        }
+
         // Setup bell handler
         info.emulator?.onBell = {
             BellHandler.onBell(this, properties.bellCharacter, terminalView)
@@ -333,6 +373,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.extraKeys.setTerminalView(terminalView!!)
+        
+        // Auto-focus the terminal and show keyboard
+        terminalView?.requestFocus()
+        
         updateTitle()
     }
 

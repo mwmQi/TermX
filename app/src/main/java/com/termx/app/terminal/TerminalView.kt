@@ -4,11 +4,13 @@ import android.content.ClipData
 import android.content.Context
 import android.graphics.*
 import android.content.ClipboardManager
+import android.text.InputType
 import android.util.AttributeSet
 import android.view.*
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputMethodManager
 import android.widget.Scroller
 import kotlin.math.max
 import kotlin.math.min
@@ -92,6 +94,10 @@ class TerminalView @JvmOverloads constructor(
     }
 
     init {
+        isFocusable = true
+        isFocusableInTouchMode = true
+        setBackgroundColor(0)
+
         bgPaint.color = colors.background
         selectionPaint.color = Color.argb(80, 100, 150, 255)
         selectionPaint.style = Paint.Style.FILL
@@ -324,6 +330,10 @@ class TerminalView @JvmOverloads constructor(
                 touchStartY = event.y
                 isDraggingSelection = false
                 longPressDetected = false
+
+                requestFocus()
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(this, 0)
             }
             MotionEvent.ACTION_MOVE -> {
                 if (longPressDetected) {
@@ -407,17 +417,17 @@ class TerminalView @JvmOverloads constructor(
                 session?.sendPageDown()
                 return true
             }
-        }
-
-        // Handle character input
-        val c = event.unicodeChar.toChar()
-        if (c != '\u0000') {
-            if (event.isCtrlPressed) {
-                session?.sendCtrl(c)
-            } else {
-                session?.write(c.toString())
+            else -> {
+                val ch = event.unicodeChar.toChar()
+                if (ch != '\u0000') {
+                    if (event.isCtrlPressed) {
+                        session?.sendCtrl(ch)
+                    } else {
+                        session?.write(ch.toString())
+                    }
+                    return true
+                }
             }
-            return true
         }
 
         return super.onKeyDown(keyCode, event)
@@ -426,6 +436,9 @@ class TerminalView @JvmOverloads constructor(
     override fun onCheckIsTextEditor(): Boolean = true
 
     override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        outAttrs.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        outAttrs.imeOptions = EditorInfo.IME_FLAG_NO_FULLSCREEN or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+        outAttrs.imeOptions = outAttrs.imeOptions or EditorInfo.IME_ACTION_NONE
         return TerminalInputConnection(this)
     }
 
@@ -528,14 +541,8 @@ class TerminalView @JvmOverloads constructor(
 
         override fun performEditorAction(actionCode: Int): Boolean {
             when (actionCode) {
-<<<<<<< HEAD
-                android.view.inputmethod.EditorInfo.IME_ACTION_DONE,
-                android.view.inputmethod.EditorInfo.IME_ACTION_DONE,
-                android.view.inputmethod.EditorInfo.IME_ACTION_NEXT -> {
-=======
                 EditorInfo.IME_ACTION_DONE,
                 EditorInfo.IME_ACTION_NEXT -> {
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                     terminalView.session?.sendEnter()
                     return true
                 }

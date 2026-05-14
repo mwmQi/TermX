@@ -48,12 +48,7 @@ object ScreenshotApi {
         val mgr = context.getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
         context.startActivityForResult(mgr.createScreenCaptureIntent(), 7001)
         "Permission request launched"
-<<<<<<< HEAD
-    } catch (e: Exception) { "Error: ${e.message}" }
-    }
-=======
     } catch (e: Exception) { "Error: ${e.message}" } }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Take a screenshot of the entire display and save as PNG. */
     fun takeScreenshot(context: Context, path: String): String { return try {
@@ -82,12 +77,7 @@ object ScreenshotApi {
         cleanup()
         Log.i(TAG, "Screenshot saved: $path"); "Screenshot saved: $path (${file.length()}B, ${w}x${h})"
     } catch (e: SecurityException) { cleanup(); "Error: Permission denied or expired. Re-grant permission." }
-<<<<<<< HEAD
-    catch (e: Exception) { Log.e(TAG, "Screenshot failed", e); cleanup(); "Error: ${e.message}" }
-    }
-=======
     catch (e: Exception) { Log.e(TAG, "Screenshot failed", e); cleanup(); "Error: ${e.message}" } }
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
     /** Take a screenshot of a specific area. */
     fun takeScreenshotArea(context: Context, path: String, x: Int, y: Int, cropW: Int, cropH: Int): String { return try {

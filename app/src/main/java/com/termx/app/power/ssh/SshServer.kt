@@ -719,11 +719,7 @@ class SshServer(private val context: Context) {
                 serverKexinit = serverKexinit,
                 hostKeyBlob = hostKeyBlob,
                 clientDhPublic = clientPublic,
-<<<<<<< HEAD
-                serverDhPublic = dhKeyPair.public,
-=======
                 serverDhPublic = dhKeyPair.publicKey,
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
                 sharedSecret = sharedSecret
             )
 
@@ -731,11 +727,7 @@ class SshServer(private val context: Context) {
             val signature = signWithHostKey(hostKeyPair, sessionIdHash)
 
             // Build KEXDH_REPLY message
-<<<<<<< HEAD
-            val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.public, signature)
-=======
             val replyPayload = buildKexdhReplyPayload(hostKeyBlob, dhKeyPair.publicKey, signature)
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
             // Send KEXDH_REPLY
             sendSshPacket(output, SSH_MSG_KEXDH_REPLY, replyPayload)
@@ -1768,42 +1760,4 @@ IdleTimeout 0
         }
     }
 
-<<<<<<< HEAD
-    // ---- BigInteger wrapper (for DH) ----
-
-    private class BigInteger private constructor(private val value: java.math.BigInteger) : Number(), Comparable<BigInteger> {
-
-        constructor(hexStr: String, radix: Int) : this(java.math.BigInteger(hexStr, radix))
-        constructor(ba: ByteArray) : this(java.math.BigInteger(ba))
-        constructor(signum: Int, magnitude: ByteArray) : this(java.math.BigInteger(signum, magnitude))
-        constructor(bitLength: Int, random: SecureRandom) : this(java.math.BigInteger(bitLength, random))
-
-        fun modPow(exp: BigInteger, m: BigInteger): BigInteger =
-            BigInteger(value.modPow(exp.value, m.value))
-
-        fun abs(): BigInteger = BigInteger(value.abs())
-
-        fun add(other: BigInteger): BigInteger = BigInteger(value.add(other.value))
-
-        val bitLength: Int get() = value.bitLength()
-
-        fun toByteArray(): ByteArray = value.toByteArray()
-
-        override fun compareTo(other: BigInteger): Int = value.compareTo(other.value)
-
-        override fun toByte(): Byte = value.toByte()
-        override fun toChar(): Char = value.toChar()
-        override fun toDouble(): Double = value.toDouble()
-        override fun toFloat(): Float = value.toFloat()
-        override fun toInt(): Int = value.toInt()
-        override fun toLong(): Long = value.toLong()
-        override fun toShort(): Short = value.toShort()
-
-        companion object {
-            val ONE: BigInteger = BigInteger(java.math.BigInteger.ONE)
-            val ZERO: BigInteger = BigInteger(java.math.BigInteger.ZERO)
-        }
-    }
-=======
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 }

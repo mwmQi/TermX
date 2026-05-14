@@ -4,10 +4,6 @@ import android.content.Context
 import android.util.Log
 import java.io.*
 import java.util.zip.GZIPInputStream
-<<<<<<< HEAD
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-=======
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
 
 /**
  * TermX Package Manager — the core of the `pkg` command system.
@@ -467,51 +463,8 @@ class TermXPackageManager(private val context: Context) {
      */
     private fun extractPackage(archiveFile: File): Boolean {
         try {
-<<<<<<< HEAD
-            TarArchiveInputStream(GZIPInputStream(FileInputStream(archiveFile))).use { tarStream ->
-                var entry = tarStream.nextTarEntry
-                while (entry != null) {
-                    val outputFile = File(prefixDir, entry.name)
-
-                    // Security: prevent path traversal
-                    if (!outputFile.canonicalPath.startsWith(prefixDir.canonicalPath)) {
-                        Log.w(TAG, "Skipping path traversal entry: ${entry.name}")
-                        entry = tarStream.nextTarEntry
-                        continue
-                    }
-
-                    if (entry.isDirectory) {
-                        outputFile.mkdirs()
-                    } else {
-                        // Ensure parent directory exists
-                        outputFile.parentFile?.mkdirs()
-
-                        FileOutputStream(outputFile).use { output ->
-                            val buffer = ByteArray(8192)
-                        var bytesRead: Int
-                        while (tarStream.read(buffer).also { bytesRead = it } != -1) {
-                            output.write(buffer, 0, bytesRead)
-                            }
-                        }
-
-                        // Preserve executable permission
-                        if (entry.name.startsWith("bin/") || entry.name.contains("/bin/")) {
-                            try {
-                                Runtime.getRuntime().exec(
-                                    arrayOf("chmod", "755", outputFile.absolutePath)
-                                ).waitFor()
-                            } catch (e: Exception) {
-                                Log.w(TAG, "chmod failed for ${entry.name}: ${e.message}")
-                            }
-                        }
-                    }
-
-                    entry = tarStream.nextTarEntry
-                }
-=======
             GZIPInputStream(FileInputStream(archiveFile)).use { gzipStream ->
                 extractTar(gzipStream)
->>>>>>> 0edb222 (Fix all 307 compilation errors - BUILD SUCCESSFUL)
             }
             return true
         } catch (e: Exception) {

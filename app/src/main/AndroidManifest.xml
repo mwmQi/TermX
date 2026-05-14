@@ -79,8 +79,7 @@
     <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 
     <!-- Screen recording / Media projection -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
-
+    
     <application
         android:name=".TermXApp"
         android:allowBackup="true"
