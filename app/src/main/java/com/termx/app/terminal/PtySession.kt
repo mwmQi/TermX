@@ -54,6 +54,7 @@ class PtySession(
             env["TMPDIR"] = "/data/data/com.termx.app/files/usr/tmp"
             env["PREFIX"] = "/data/data/com.termx.app/files/usr"
             env["LD_LIBRARY_PATH"] = "/data/data/com.termx.app/files/usr/lib"
+            env["PS1"] = "\u001B[32m\\w\u001B[0m $ "
 
             // X11 display env — inject DISPLAY for running display sessions
             // This allows GUI apps (chromium, firefox, etc.) to render to the virtual display

@@ -18,6 +18,7 @@ import kotlin.math.min
 /**
  * Custom View that renders a terminal screen.
  * Handles drawing, touch input, scrolling, and text selection.
+ * Updated to use TerminalRenderer and support pinch-to-zoom.
  */
 class TerminalView @JvmOverloads constructor(
     context: Context,
@@ -46,6 +47,7 @@ class TerminalView @JvmOverloads constructor(
 
     private var fontSize: Float = 14f // in SP
     private var fontType: String = "monospace"
+    private var renderer: TerminalRenderer? = null
 
     // Paints
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -110,16 +112,12 @@ class TerminalView @JvmOverloads constructor(
         val density = resources.displayMetrics.density
         val pxSize = fontSize * density
 
-        textPaint.typeface = Typeface.MONOSPACE
-        textPaint.textSize = pxSize
-        textPaint.color = colors.foreground
-
-        // Measure character dimensions
-        val metrics = textPaint.fontMetrics
-        charHeight = metrics.descent - metrics.ascent
-        charWidth = textPaint.measureText("M")
+        renderer = TerminalRenderer(pxSize, Typeface.MONOSPACE)
+        
+        charWidth = renderer!!.fontWidth
+        charHeight = renderer!!.fontLineSpacing.toFloat()
         cellWidth = charWidth
-        cellHeight = charHeight * 1.2f // Add line spacing
+        cellHeight = charHeight
 
         cursorPaint.color = colors.cursor
         cursorPaint.style = Paint.Style.FILL
@@ -129,18 +127,18 @@ class TerminalView @JvmOverloads constructor(
     }
 
     private fun recalculateSize() {
-        val availWidth = (width - paddingLeftPx - paddingRightPx).coerceAtLeast(1f)
-        val availHeight = (height - paddingTopPx - paddingBottomPx).coerceAtLeast(1f)
+        if (width <= 0 || height <= 0) return
+        
+        val availWidth = (width - paddingLeftPx - paddingRightPx).coerceAtLeast(cellWidth)
+        val availHeight = (height - paddingTopPx - paddingBottomPx).coerceAtLeast(cellHeight)
 
-        val newCols = (availWidth / cellWidth).toInt().coerceAtLeast(1)
-        val newRows = (availHeight / cellHeight).toInt().coerceAtLeast(1)
+        val newCols = (availWidth / cellWidth).toInt().coerceAtLeast(4)
+        val newRows = (availHeight / cellHeight).toInt().coerceAtLeast(4)
 
         if (newCols != buffer.columns || newRows != buffer.rows) {
             buffer.resize(newCols, newRows)
             session?.columns = newCols
             session?.rows = newRows
-            // Resize native PTY — sends TIOCSWINSZ which generates SIGWINCH
-            // in the child's foreground process group
             session?.resize(newCols, newRows)
         }
     }
@@ -161,100 +159,26 @@ class TerminalView @JvmOverloads constructor(
         // Draw background
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
 
-        val totalLines = buffer.rows + buffer.scrollbackSize
-        val startRow = buffer.scrollbackSize - scrollOffset
-        val endRow = startRow + buffer.rows
+        // Use high-performance renderer
+        renderer?.render(buffer, canvas, colors, scrollOffset, paddingLeftPx, paddingTopPx)
 
-        // Draw cells
+        // Draw selection
         for (screenRow in 0 until buffer.rows) {
-            val scrollbackRow = startRow + screenRow
             val y = paddingTopPx + screenRow * cellHeight
-
-            // Get the line data
-            val cells: Array<TerminalCell> = when {
-                scrollbackRow < 0 -> {
-                    // Capped scrollback fallback
-                    Array(buffer.columns) { col -> buffer.getCell(screenRow, col) }
-                }
-                scrollbackRow < buffer.scrollbackSize -> {
-                    // Scrollback line
-                    buffer.getScrollbackLine(scrollbackRow) ?: continue
-                }
-                else -> {
-                    // Regular screen buffer
-                    val actualRow = scrollbackRow - buffer.scrollbackSize
-                    if (actualRow >= buffer.rows) continue
-                    Array(buffer.columns) { col -> buffer.getCell(actualRow, col) }
-                }
-            }
-
-            // Draw backgrounds first (for colored backgrounds)
-            var bgRunStart = -1
-            var currentBgColor = colors.background
-            for (col in 0 until cells.size) {
-                val cell = if (col < cells.size) cells[col] else TerminalCell()
-                var cellBg = if (cell.inverse) cell.fgColor else cell.bgColor
-                if (cellBg == 0) cellBg = if (cell.inverse) colors.foreground else colors.background
-
-                if (cellBg != currentBgColor || col == cells.size - 1) {
-                    if (bgRunStart >= 0 && currentBgColor != colors.background) {
-                        val x1 = paddingLeftPx + bgRunStart * cellWidth
-                        val x2 = paddingLeftPx + (col + 1) * cellWidth
-                        bgPaint.color = currentBgColor
-                        canvas.drawRect(x1, y, x2, y + cellHeight, bgPaint)
-                    }
-                    currentBgColor = cellBg
-                    bgRunStart = col
-                }
-                if (bgRunStart < 0) bgRunStart = col
-            }
-            bgPaint.color = colors.background
-
-            // Draw selection
             drawSelection(canvas, screenRow, y)
-
-            // Draw characters
-            for (col in 0 until cells.size) {
-                val cell = cells[col]
-                if (cell.char != ' ' && cell.char != '\u0000') {
-                    val x = paddingLeftPx + col * cellWidth
-
-                    // Determine color
-                    var fg = if (cell.inverse) cell.bgColor else cell.fgColor
-                    if (fg == 0) fg = if (cell.inverse) colors.background else colors.foreground
-
-                    textPaint.color = fg
-                    textPaint.isFakeBoldText = cell.bold
-                    textPaint.isUnderlineText = cell.underline
-                    textPaint.isStrikeThruText = cell.strikethrough
-                    textPaint.textSkewX = if (cell.italic) -0.2f else 0f
-
-                    val textY = y + cellHeight - textPaint.fontMetrics.descent
-                    canvas.drawText(cell.char.toString(), x, textY, textPaint)
-                }
-            }
         }
 
         // Draw cursor
         if (buffer.cursorVisible && cursorBlinkOn && scrollOffset == 0) {
             val cursorX = paddingLeftPx + buffer.cursorCol * cellWidth
-            val cursorY = paddingTopPx + buffer.cursorRow * cellHeight
+            val cursorY = paddingTopPx + (buffer.cursorRow + 1) * cellHeight // Baseline-ish
 
-            // Cursor style: block
             cursorPaint.alpha = 180
             canvas.drawRect(
-                cursorX, cursorY,
-                cursorX + cellWidth, cursorY + cellHeight,
+                cursorX, cursorY - cellHeight,
+                cursorX + cellWidth, cursorY,
                 cursorPaint
             )
-
-            // Draw character under cursor with inverted color
-            val cell = buffer.getCell(buffer.cursorRow, buffer.cursorCol)
-            if (cell.char != ' ' && cell.char != '\u0000') {
-                textPaint.color = colors.background
-                val textY = cursorY + cellHeight - textPaint.fontMetrics.descent
-                canvas.drawText(cell.char.toString(), cursorX, textY, textPaint)
-            }
         }
     }
 
@@ -279,21 +203,21 @@ class TerminalView @JvmOverloads constructor(
     // ---- Input Handling ----
 
     private lateinit var gestureDetector: GestureDetector
+    private lateinit var scaleDetector: ScaleGestureDetector
 
     private fun setupGestureDetector() {
         gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
             override fun onSingleTapUp(e: MotionEvent): Boolean {
                 requestFocus()
+                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                imm.showSoftInput(this@TerminalView, 0)
                 return true
             }
 
             override fun onLongPress(e: MotionEvent) {
                 longPressDetected = true
-                // Start selection at touch position
                 val col = ((e.x - paddingLeftPx) / cellWidth).toInt().coerceIn(0, buffer.columns - 1)
                 val row = ((e.y - paddingTopPx) / cellHeight).toInt().coerceIn(0, buffer.rows - 1)
-
-                // Select the word at position
                 selectWordAt(row, col)
                 invalidate()
             }
@@ -303,14 +227,42 @@ class TerminalView @JvmOverloads constructor(
                 distanceX: Float, distanceY: Float
             ): Boolean {
                 if (!isDraggingSelection) {
-                    // Terminal scroll
                     val scrollLines = (distanceY / cellHeight).toInt()
-                    scrollOffset = (scrollOffset + scrollLines).coerceIn(
-                        0, buffer.scrollbackSize
-                    )
-                    invalidate()
+                    if (scrollLines != 0) {
+                        scrollOffset = (scrollOffset + scrollLines).coerceIn(0, buffer.scrollbackSize)
+                        invalidate()
+                    }
                 }
                 return true
+            }
+        })
+
+        scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            private var lastScaleTime: Long = 0
+
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                val now = System.currentTimeMillis()
+                if (now - lastScaleTime < 100) return false
+                
+                val factor = detector.scaleFactor
+                if (factor > 1.1f) {
+                    if (fontSize < 32f) {
+                        fontSize += 1f
+                        updateFont()
+                        invalidate()
+                        lastScaleTime = now
+                    }
+                    return true
+                } else if (factor < 0.9f) {
+                    if (fontSize > 8f) {
+                        fontSize -= 1f
+                        updateFont()
+                        invalidate()
+                        lastScaleTime = now
+                    }
+                    return true
+                }
+                return false
             }
         })
     }
@@ -323,7 +275,7 @@ class TerminalView @JvmOverloads constructor(
         var endCol = col
 
         // Find word boundaries
-        while (startCol > 0 && line[startCol - 1].isLetterOrDigit()) startCol--
+        while (startCol > 0 && startCol <= line.length && line[startCol - 1].isLetterOrDigit()) startCol--
         while (endCol < line.length && line[endCol].isLetterOrDigit()) endCol++
 
         buffer.selectionStart = row to startCol
@@ -331,6 +283,9 @@ class TerminalView @JvmOverloads constructor(
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        scaleDetector.onTouchEvent(event)
+        if (scaleDetector.isInProgress) return true
+        
         gestureDetector.onTouchEvent(event)
 
         when (event.actionMasked) {
@@ -341,8 +296,6 @@ class TerminalView @JvmOverloads constructor(
                 longPressDetected = false
 
                 requestFocus()
-                val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                imm.showSoftInput(this, 0)
             }
             MotionEvent.ACTION_MOVE -> {
                 if (longPressDetected) {

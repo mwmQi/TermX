@@ -91,6 +91,14 @@ class X11DisplayView @JvmOverloads constructor(
         offsetY = 0f
     }
 
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (w > 0 && h > 0) {
+            X11Manager.resizeDisplay(displayNum, w, h)
+            updateDimensions()
+        }
+    }
+
     private fun renderLoop() {
         var lastFrame = 0L
         val targetFps = 30
@@ -105,19 +113,36 @@ class X11DisplayView @JvmOverloads constructor(
                 lastFrame = now
 
                 // Check if display is still running
-                if (!X11Manager.isDisplayRunning(displayNum)) continue
+                if (!X11Manager.isDisplayRunning(displayNum)) {
+                    Thread.sleep(500)
+                    continue
+                }
 
                 // Update dimensions
                 updateDimensions()
 
+                if (fbWidth <= 0 || fbHeight <= 0) {
+                    Thread.sleep(100)
+                    continue
+                }
+
                 // Get framebuffer bitmap
-                val bitmap = if (isNative && nativeHandle != 0L) {
-                    X11Manager.getFramebufferBitmap(displayNum)
-                } else {
-                    kotlinServer?.framebufferRef?.getSnapshot()
+                val bitmap = try {
+                    if (isNative && nativeHandle != 0L) {
+                        X11Manager.getFramebufferBitmap(displayNum)
+                    } else {
+                        kotlinServer?.framebufferRef?.getSnapshot()
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to get bitmap", e)
+                    null
                 } ?: continue
 
-                val canvas = holder.lockCanvas() ?: continue
+                val canvas = try {
+                    holder.lockCanvas()
+                } catch (e: Exception) {
+                    null
+                } ?: continue
 
                 try {
                     // Clear
