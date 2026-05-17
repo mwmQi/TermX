@@ -13,18 +13,18 @@ android {
     //   RELEASE_KEYSTORE_ALIAS - key alias
     //   RELEASE_KEYSTORE_PASSWORD - keystore password
     //   RELEASE_KEY_PASSWORD - key password
-    val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
-    val keystoreAlias = System.getenv("RELEASE_KEYSTORE_ALIAS")
-    val keystorePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
-    val keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+    val ksPath = System.getenv("RELEASE_KEYSTORE_PATH")
+    val ksAlias = System.getenv("RELEASE_KEYSTORE_ALIAS")
+    val ksPassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+    val ksKeyPassword = System.getenv("RELEASE_KEY_PASSWORD")
 
     signingConfigs {
-        if (!keystorePath.isNullOrBlank() && File(keystorePath).exists()) {
+        if (!ksPath.isNullOrBlank() && File(ksPath).exists()) {
             create("release") {
-                storeFile = File(keystorePath)
-                storePassword = keystorePassword
-                keyAlias = keystoreAlias
-                keyPassword = keyPassword
+                storeFile = File(ksPath)
+                storePassword = ksPassword
+                keyAlias = ksAlias
+                keyPassword = ksKeyPassword
             }
         }
     }
@@ -61,7 +61,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (!keystorePath.isNullOrBlank() && File(keystorePath).exists()) {
+            if (!ksPath.isNullOrBlank() && File(ksPath).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
