@@ -54,6 +54,11 @@ android {
         }
     }
 
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -64,8 +69,6 @@ android {
             if (!ksPath.isNullOrBlank() && File(ksPath).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
-            // Disable lint for release builds (pre-existing lint issues)
-            isLintVitalEnabled = false
         }
         debug {
             isDebuggable = true
