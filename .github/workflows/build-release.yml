@@ -57,7 +57,7 @@ jobs:
             -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD || 'termx123' }} \
             -keypass ${{ secrets.RELEASE_KEY_PASSWORD || 'termx123' }} \
             -dname "CN=TermX, OU=TermX, O=TermX, L=Unknown, S=Unknown, C=US"
-          echo "KEYSTORE_PATH=app/release-keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_PATH=release-keystore.jks" >> $GITHUB_ENV
           echo "KEYSTORE_ALIAS=termx-release" >> $GITHUB_ENV
 
       - name: Decode release keystore from secrets
@@ -67,7 +67,7 @@ jobs:
         run: |
           mkdir -p app
           echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > app/release-keystore.jks
-          echo "KEYSTORE_PATH=app/release-keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_PATH=release-keystore.jks" >> $GITHUB_ENV
           echo "KEYSTORE_ALIAS=termx-release" >> $GITHUB_ENV
 
       - name: Grant execute permission for gradlew
