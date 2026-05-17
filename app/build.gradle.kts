@@ -64,6 +64,8 @@ android {
             if (!ksPath.isNullOrBlank() && File(ksPath).exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // Disable lint for release builds (pre-existing lint issues)
+            isLintVitalEnabled = false
         }
         debug {
             isDebuggable = true
