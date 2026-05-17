@@ -1829,11 +1829,6 @@ static void stop_server(X11Server *server) {
     /* Wait briefly for threads to exit using multiple short sleeps */
     for (int i = 0; i < 10; i++) {
         usleep(50000);  /* 50ms * 10 = 500ms total */
-        /* Check if accept thread has exited */
-        void *thread_ret;
-        if (pthread_tryjoin_np(server->accept_thread, &thread_ret) == 0) {
-            break;  /* Thread exited */
-        }
     }
 
     /* Free pixmaps */
