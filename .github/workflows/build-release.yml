@@ -96,7 +96,7 @@ jobs:
       - name: Verify APK signature
         run: |
           APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
-          apksigner verify --verbose "$APK_PATH"
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose "$APK_PATH"
           echo "APK signature verified successfully"
 
       - name: Generate SHA256 checksum
