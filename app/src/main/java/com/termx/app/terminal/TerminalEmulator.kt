@@ -25,6 +25,13 @@ class TerminalEmulator(
     private val oscBuffer = StringBuilder()
     private var charsetIndex = 0
 
+    // UTF-8 decoding state
+    private var utf8State = Utf8State.NORMAL
+    private var utf8CodePoint = 0
+    private var utf8BytesRemaining = 0
+
+    enum class Utf8State { NORMAL, EXPECTING }
+
     // Title callback
     var onTitleChanged: ((String) -> Unit)? = null
 
@@ -66,7 +73,7 @@ class TerminalEmulator(
                     buffer.cursorCol = buffer.columns - 1
                 }
             }
-            0x0A -> { // LF - Line Feed
+            0x0A, 0x0B, 0x0C -> { // LF, VT, FF - Line Feed
                 buffer.cursorRow++
                 if (buffer.cursorRow > buffer.scrollBottom) {
                     buffer.scrollUp()
@@ -76,9 +83,55 @@ class TerminalEmulator(
             0x0D -> buffer.cursorCol = 0 // CR - Carriage Return
             0x1B -> state = State.ESC // ESC
             in 0x20..0x7E -> buffer.putChar(b.toChar()) // Printable ASCII
-            in 0x80..0xFF -> {
-                // UTF-8 handling - for now treat as printable
-                buffer.putChar(b.toChar())
+            else -> {
+                // UTF-8 multi-byte sequence handling
+                if (utf8State == Utf8State.NORMAL) {
+                    if (b <= 0x7F) {
+                        // ASCII - already handled above
+                        return
+                    } else if (b and 0xE0 == 0xC0) {
+                        // 2-byte sequence: 110xxxxx
+                        utf8CodePoint = b and 0x1F
+                        utf8BytesRemaining = 1
+                        utf8State = Utf8State.EXPECTING
+                    } else if (b and 0xF0 == 0xE0) {
+                        // 3-byte sequence: 1110xxxx
+                        utf8CodePoint = b and 0x0F
+                        utf8BytesRemaining = 2
+                        utf8State = Utf8State.EXPECTING
+                    } else if (b and 0xF8 == 0xF0) {
+                        // 4-byte sequence: 11110xxx
+                        utf8CodePoint = b and 0x07
+                        utf8BytesRemaining = 3
+                        utf8State = Utf8State.EXPECTING
+                    }
+                    // else: invalid start byte, ignore
+                } else {
+                    // Expecting continuation byte: 10xxxxxx
+                    if (b and 0xC0 == 0x80) {
+                        utf8CodePoint = (utf8CodePoint shl 6) or (b and 0x3F)
+                        utf8BytesRemaining--
+                        if (utf8BytesRemaining == 0) {
+                            // Complete code point
+                            if (utf8CodePoint <= 0xFFFF) {
+                                buffer.putChar(utf8CodePoint.toChar())
+                            } else {
+                                // Surrogate pair for code points > 0xFFFF
+                                val offset = utf8CodePoint - 0x10000
+                                val high = (0xD800 + (offset shr 10)).toChar()
+                                val low = (0xDC00 + (offset and 0x3FF)).toChar()
+                                buffer.putChar(high)
+                                buffer.putChar(low)
+                            }
+                            utf8State = Utf8State.NORMAL
+                            utf8CodePoint = 0
+                        }
+                    } else {
+                        // Invalid continuation byte, reset
+                        utf8State = Utf8State.NORMAL
+                        utf8CodePoint = 0
+                    }
+                }
             }
         }
     }

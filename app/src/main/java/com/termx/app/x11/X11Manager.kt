@@ -2,11 +2,14 @@ package com.termx.app.x11
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.util.DisplayMetrics
 import android.util.Log
+import android.view.WindowManager
 import com.termx.app.terminal.JniX11
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Central manager for the X11 display system — multi-display support.
@@ -20,10 +23,10 @@ import java.io.FileOutputStream
  * with each display tagged by its number (e.g., "Display :0", "Display :1").
  *
  * Usage:
- *   // Start display :0 at 1024x768
- *   X11Manager.startDisplay(context, 0, 1024, 768)
+ *   // Start display :0 at auto-detected screen resolution
+ *   X11Manager.startDisplay(context, 0)
  *
- *   // Start display :1 at 1920x1080
+ *   // Start display :1 at custom resolution
  *   X11Manager.startDisplay(context, 1, 1920, 1080)
  *
  *   // Get env vars for terminal sessions
@@ -31,30 +34,20 @@ import java.io.FileOutputStream
  *
  *   // List all running displays
  *   X11Manager.listDisplays()  // -> [DisplayInfo(:0, 1024x768), DisplayInfo(:1, 1920x1080)]
- *
- * Shell usage:
- *   termx-display start           # Start display :0
- *   termx-display start 1        # Start display :1
- *   termx-display start 2 1920x1080  # Display :2 at 1920x1080
- *   termx-display stop            # Stop display :0
- *   termx-display stop 1          # Stop display :1
- *   termx-display list            # List all displays
- *   termx-display status          # Status of :0
- *   termx-display screenshot      # Screenshot of :0
  */
 object X11Manager {
 
     private const val TAG = "X11Manager"
     private const val MAX_DISPLAYS = 8
 
-    /** Active display servers, keyed by display number */
-    private val displays = mutableMapOf<Int, DisplayInfo>()
+    /** Active display servers, keyed by display number — thread-safe */
+    private val displays = ConcurrentHashMap<Int, DisplayInfo>()
 
-    /** Native X11 server handles, keyed by display number */
-    private val nativeHandles = mutableMapOf<Int, Long>()
+    /** Native X11 server handles, keyed by display number — thread-safe */
+    private val nativeHandles = ConcurrentHashMap<Int, Long>()
 
-    /** Kotlin-level display servers (fallback if native not available) */
-    private val kotlinServers = mutableMapOf<Int, X11DisplayServer>()
+    /** Kotlin-level display servers (fallback if native not available) — thread-safe */
+    private val kotlinServers = ConcurrentHashMap<Int, X11DisplayServer>()
 
     /** Use native X11 server if available */
     private val useNativeX11: Boolean by lazy { JniX11.isAvailable }
@@ -63,12 +56,35 @@ object X11Manager {
     var onDisplayListChanged: (() -> Unit)? = null
 
     /**
+     * Calculate the optimal display resolution based on the device screen size.
+     * Returns a resolution that fits within the screen while maintaining a standard aspect ratio.
+     */
+    fun calculateAutoResolution(context: Context): Pair<Int, Int> {
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val metrics = DisplayMetrics()
+        wm.defaultDisplay.getRealMetrics(metrics)
+
+        val screenWidth = metrics.widthPixels
+        val screenHeight = metrics.heightPixels
+
+        // Use 90% of screen size, capped at reasonable limits
+        var width = (screenWidth * 0.9f).toInt().coerceIn(640, 2560)
+        var height = (screenHeight * 0.9f).toInt().coerceIn(480, 1440)
+
+        // Align to 8-pixel boundary (required by some X11 operations)
+        width = (width / 8) * 8
+        height = (height / 8) * 8
+
+        return width to height
+    }
+
+    /**
      * Start a virtual display session.
      *
      * @param context    Android context
      * @param displayNum Display number (0 for :0, 1 for :1, etc.)
-     * @param width      Display width in pixels
-     * @param height     Display height in pixels
+     * @param width      Display width in pixels (0 = auto-detect from screen)
+     * @param height     Display height in pixels (0 = auto-detect from screen)
      * @param startVnc   Whether to start the VNC server
      * @param vncPort    VNC port (default 5900 + display number)
      * @param password   Optional VNC password
@@ -77,8 +93,8 @@ object X11Manager {
     fun startDisplay(
         context: Context,
         displayNum: Int = 0,
-        width: Int = 1024,
-        height: Int = 768,
+        width: Int = 0,
+        height: Int = 0,
         startVnc: Boolean = true,
         vncPort: Int = 5900 + displayNum,
         password: String? = null
@@ -86,6 +102,15 @@ object X11Manager {
         if (displayNum < 0 || displayNum >= MAX_DISPLAYS) {
             Log.w(TAG, "Invalid display number: $displayNum (max ${MAX_DISPLAYS - 1})")
             return false
+        }
+
+        // Auto-detect resolution if not specified
+        val (resolvedWidth, resolvedHeight) = if (width <= 0 || height <= 0) {
+            val (w, h) = calculateAutoResolution(context)
+            Log.i(TAG, "Auto-resolving display :$displayNum to ${w}x${h}")
+            w to h
+        } else {
+            width to height
         }
 
         if (displays.containsKey(displayNum)) {
@@ -97,7 +122,7 @@ object X11Manager {
 
         if (useNativeX11) {
             // Use native C X11 server
-            val handle = JniX11.nativeStartServer(displayNum, width, height)
+            val handle = JniX11.nativeStartServer(displayNum, resolvedWidth, resolvedHeight)
             if (handle == 0L) {
                 Log.e(TAG, "Failed to start native X11 server for display :$displayNum")
                 return false
@@ -106,43 +131,48 @@ object X11Manager {
             nativeHandles[displayNum] = handle
             displays[displayNum] = DisplayInfo(
                 displayNum = displayNum,
-                width = width,
-                height = height,
+                width = resolvedWidth,
+                height = resolvedHeight,
                 vncPort = if (startVnc) vncPort else -1,
                 startTime = startTime,
                 nativeHandle = handle
             )
 
-            Log.i(TAG, "Native X11 display :$displayNum started (${width}x${height})")
+            Log.i(TAG, "Native X11 display :$displayNum started (${resolvedWidth}x${resolvedHeight})")
 
         } else {
             // Fallback to Kotlin X11 server
-            val server = X11DisplayServer.getInstance(context)
-            val success = server.start(
-                displayNum = displayNum,
-                w = width,
-                h = height,
-                startVnc = startVnc,
-                vncPort = vncPort,
-                vncPassword = password
-            )
+            try {
+                val server = X11DisplayServer.getInstance(context)
+                val success = server.start(
+                    displayNum = displayNum,
+                    w = resolvedWidth,
+                    h = resolvedHeight,
+                    startVnc = startVnc,
+                    vncPort = vncPort,
+                    vncPassword = password
+                )
 
-            if (!success) {
-                Log.e(TAG, "Failed to start Kotlin X11 server for display :$displayNum")
+                if (!success) {
+                    Log.e(TAG, "Failed to start Kotlin X11 server for display :$displayNum")
+                    return false
+                }
+
+                kotlinServers[displayNum] = server
+                displays[displayNum] = DisplayInfo(
+                    displayNum = displayNum,
+                    width = resolvedWidth,
+                    height = resolvedHeight,
+                    vncPort = if (startVnc) vncPort else -1,
+                    startTime = startTime,
+                    kotlinServer = server
+                )
+
+                Log.i(TAG, "Kotlin X11 display :$displayNum started (${resolvedWidth}x${resolvedHeight})")
+            } catch (e: Exception) {
+                Log.e(TAG, "Exception starting Kotlin X11 display :$displayNum", e)
                 return false
             }
-
-            kotlinServers[displayNum] = server
-            displays[displayNum] = DisplayInfo(
-                displayNum = displayNum,
-                width = width,
-                height = height,
-                vncPort = if (startVnc) vncPort else -1,
-                startTime = startTime,
-                kotlinServer = server
-            )
-
-            Log.i(TAG, "Kotlin X11 display :$displayNum started (${width}x${height})")
         }
 
         onDisplayListChanged?.invoke()
@@ -150,19 +180,29 @@ object X11Manager {
     }
 
     /**
-     * Stop a specific display session.
+     * Stop a specific display session. Thread-safe — handles concurrent calls.
      */
     fun stopDisplay(displayNum: Int = 0) {
         val info = displays.remove(displayNum) ?: return
 
-        nativeHandles[displayNum]?.let { handle ->
-            JniX11.nativeStopServer(handle)
-            nativeHandles.remove(displayNum)
+        // Atomically remove and stop native handle
+        val handle = nativeHandles.remove(displayNum)
+        if (handle != null && handle != 0L) {
+            try {
+                JniX11.nativeStopServer(handle)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping native X11 server for :$displayNum", e)
+            }
         }
 
-        kotlinServers[displayNum]?.let { server ->
-            server.stop()
-            kotlinServers.remove(displayNum)
+        // Atomically remove and stop Kotlin server
+        val server = kotlinServers.remove(displayNum)
+        if (server != null) {
+            try {
+                server.stop()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping Kotlin X11 server for :$displayNum", e)
+            }
         }
 
         Log.i(TAG, "Display :$displayNum stopped")
@@ -248,6 +288,7 @@ object X11Manager {
         val handle = nativeHandles[displayNum] ?: return null
         val info = displays[displayNum] ?: return null
         val size = info.width * info.height * 4
+        if (size <= 0) return null
         val buf = ByteArray(size)
         if (JniX11.nativeReadFramebuffer(handle, buf, 0, size)) {
             return buf
@@ -259,32 +300,48 @@ object X11Manager {
      * Get a framebuffer bitmap from a native display.
      */
     fun getFramebufferBitmap(displayNum: Int = 0): Bitmap? {
-        val data = readFramebuffer(displayNum) ?: return null
         val info = displays[displayNum] ?: return null
+        val data = readFramebuffer(displayNum) ?: return null
 
-        val bitmap = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
-        val pixels = IntArray(info.width * info.height)
+        if (info.width <= 0 || info.height <= 0) return null
 
-        for (i in 0 until pixels.size) {
-            val base = i * 4
-            val r = data[base].toInt() and 0xFF
-            val g = data[base + 1].toInt() and 0xFF
-            val b = data[base + 2].toInt() and 0xFF
-            val a = data[base + 3].toInt() and 0xFF
-            pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+        return try {
+            val bitmap = Bitmap.createBitmap(info.width, info.height, Bitmap.Config.ARGB_8888)
+            val pixels = IntArray(info.width * info.height)
+
+            for (i in 0 until pixels.size) {
+                val base = i * 4
+                val r = data[base].toInt() and 0xFF
+                val g = data[base + 1].toInt() and 0xFF
+                val b = data[base + 2].toInt() and 0xFF
+                val a = data[base + 3].toInt() and 0xFF
+                pixels[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+            }
+
+            bitmap.setPixels(pixels, 0, info.width, 0, 0, info.width, info.height)
+            bitmap
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to create framebuffer bitmap for :$displayNum", e)
+            null
         }
-
-        bitmap.setPixels(pixels, 0, info.width, 0, 0, info.width, info.height)
-        return bitmap
     }
 
     /**
      * Resize a display.
      */
     fun resizeDisplay(displayNum: Int = 0, width: Int, height: Int) {
+        if (width <= 0 || height <= 0) {
+            Log.w(TAG, "Invalid resize dimensions: ${width}x${height}")
+            return
+        }
+
         val handle = nativeHandles[displayNum]
-        if (handle != null) {
-            JniX11.nativeResize(handle, width, height)
+        if (handle != null && handle != 0L) {
+            try {
+                JniX11.nativeResize(handle, width, height)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to resize native display :$displayNum", e)
+            }
         }
 
         kotlinServers[displayNum]?.resize(width, height)
@@ -302,8 +359,7 @@ object X11Manager {
      */
     fun takeScreenshot(displayNum: Int = 0, path: String): Boolean {
         val handle = nativeHandles[displayNum]
-        if (handle != null) {
-            // Native server can save PPM directly, but we prefer PNG
+        if (handle != null && handle != 0L) {
             val bitmap = getFramebufferBitmap(displayNum) ?: return false
             try {
                 FileOutputStream(path).use { out ->
@@ -324,7 +380,7 @@ object X11Manager {
      */
     fun sendKeyEvent(displayNum: Int = 0, keysym: Int, down: Boolean) {
         val handle = nativeHandles[displayNum]
-        if (handle != null) {
+        if (handle != null && handle != 0L) {
             JniX11.nativeSendKeyEvent(handle, keysym, down)
             return
         }
@@ -337,7 +393,7 @@ object X11Manager {
      */
     fun sendPointerEvent(displayNum: Int = 0, x: Int, y: Int, buttonMask: Int) {
         val handle = nativeHandles[displayNum]
-        if (handle != null) {
+        if (handle != null && handle != 0L) {
             JniX11.nativeSendPointerEvent(handle, x, y, buttonMask)
             return
         }
@@ -349,7 +405,7 @@ object X11Manager {
      */
     fun getClientCount(displayNum: Int = 0): Int {
         val handle = nativeHandles[displayNum]
-        if (handle != null) {
+        if (handle != null && handle != 0L) {
             return JniX11.nativeGetClientCount(handle)
         }
         return kotlinServers[displayNum]?.let { server ->
@@ -400,10 +456,14 @@ object X11Manager {
         return when (args[0]) {
             "start" -> {
                 val displayNum = args.getOrElse(1) { "0" }.toIntOrNull() ?: 0
-                val resolution = args.getOrElse(2) { "1024x768" }
+                val resolution = args.getOrElse(2) { "auto" }
                 val w: Int
                 val h: Int
-                if (resolution.contains("x")) {
+                if (resolution.equals("auto", ignoreCase = true)) {
+                    val (autoW, autoH) = calculateAutoResolution(context)
+                    w = autoW
+                    h = autoH
+                } else if (resolution.contains("x")) {
                     val parts = resolution.split("x")
                     w = parts.getOrElse(0) { "1024" }.toIntOrNull() ?: 1024
                     h = parts.getOrElse(1) { "768" }.toIntOrNull() ?: 768
@@ -470,11 +530,16 @@ object X11Manager {
                 val port = args.getOrElse(2) { (5900 + displayNum).toString() }.toIntOrNull() ?: (5900 + displayNum)
                 val server = kotlinServers[displayNum]
                 if (server != null && server.running) {
-                    val vnc = VncServer(server.framebufferRef!!, port)
-                    if (vnc.start()) {
-                        "VNC server started on port $port for display :$displayNum"
+                    val fbRef = server.framebufferRef
+                    if (fbRef != null) {
+                        val vnc = VncServer(fbRef, port)
+                        if (vnc.start()) {
+                            "VNC server started on port $port for display :$displayNum"
+                        } else {
+                            "Failed to start VNC server"
+                        }
                     } else {
-                        "Failed to start VNC server"
+                        "Framebuffer not available for display :$displayNum"
                     }
                 } else {
                     "Display :$displayNum not running. Start it first: termx-display start $displayNum"

@@ -68,7 +68,8 @@ class X11DisplayActivity : Activity() {
         nativeHandle = info.nativeHandle
         kotlinServer = info.kotlinServer
 
-        if (isNativeDisplay && nativeHandle == 0L && kotlinServer == null) {
+        // Fixed: Check if BOTH backends are unavailable (not just native)
+        if (!isNativeDisplay && kotlinServer == null) {
             Toast.makeText(this, "Display :$displayNum has no backend available.", Toast.LENGTH_LONG).show()
             finish()
             return
@@ -86,7 +87,7 @@ class X11DisplayActivity : Activity() {
         // Enter fullscreen
         FullscreenManager.enterFullscreen(this)
 
-        title = "TermX Display :$displayNum"
+        title = "TermX Display :$displayNum (${info.width}x${info.height})"
     }
 
     override fun onResume() {
@@ -127,17 +128,22 @@ class X11DisplayActivity : Activity() {
             }
             3 -> { displayView?.resetZoom(); true }
             4 -> {
-                // Send Ctrl+Alt+Del
-                X11Manager.sendKeyEvent(displayNum, 0xFF08, true)  // Backspace as Ctrl+Alt+Del
-                X11Manager.sendKeyEvent(displayNum, 0xFF08, false)
+                // Send Ctrl+Alt+Del (proper XK_Delete keysym = 0xFFFF)
+                X11Manager.sendKeyEvent(displayNum, 0xFFFF, true)
+                X11Manager.sendKeyEvent(displayNum, 0xFFFF, false)
+                Toast.makeText(this, "Ctrl+Alt+Del sent", Toast.LENGTH_SHORT).show()
                 true
             }
             5 -> {
-                // Start a new display session
+                // Start a new display session with auto-resolution
                 val newNum = X11Manager.allocateDisplayNum()
                 if (newNum >= 0) {
-                    X11Manager.startDisplay(this, newNum, 1024, 768)
-                    start(this, newNum)
+                    val (w, h) = X11Manager.calculateAutoResolution(this)
+                    if (X11Manager.startDisplay(this, newNum, w, h)) {
+                        start(this, newNum)
+                    } else {
+                        Toast.makeText(this, "Failed to start display :$newNum", Toast.LENGTH_SHORT).show()
+                    }
                 }
                 true
             }

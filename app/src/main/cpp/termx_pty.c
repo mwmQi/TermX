@@ -31,6 +31,7 @@
 #include <signal.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/select.h>
 #include <termios.h>
@@ -222,9 +223,29 @@ Java_com_termx_app_terminal_JniPty_nativeCreatePty(
         /* ---- CHILD PROCESS ---- */
         setup_child_pty(master_fd, pty->rows, pty->cols);
 
+        /* Ensure working directory exists before chdir */
+        struct stat st;
+        if (stat(dir, &st) != 0) {
+            /* Directory doesn't exist, try to create it */
+            /* Create parent directories recursively */
+            char path[512];
+            strncpy(path, dir, sizeof(path) - 1);
+            path[sizeof(path) - 1] = '\0';
+            for (char *p = path + 1; *p; p++) {
+                if (*p == '/') {
+                    *p = '\0';
+                    mkdir(path, 0755);
+                    *p = '/';
+                }
+            }
+            mkdir(dir, 0755);
+        }
+
         /* Change working directory */
         if (chdir(dir) != 0) {
-            LOGW("chdir(%s) failed: %s", dir, strerror(errno));
+            /* Fallback to /tmp if chdir fails */
+            LOGW("chdir(%s) failed: %s, falling back to /tmp", dir, strerror(errno));
+            chdir("/tmp");
         }
 
         /* Close all non-standard file descriptors */
@@ -232,18 +253,15 @@ Java_com_termx_app_terminal_JniPty_nativeCreatePty(
 
         /* Execute the shell using execve for proper environment passing */
         if (envp != NULL) {
-            extern char **environ;
-            /* Set environment variables */
-            for (int i = 0; i < envCount; i++) {
-                putenv(envp[i]);
-            }
+            char *argv[] = { (char *)shell, NULL };
+            execve(shell, argv, envp);
+        } else {
+            char *argv[] = { (char *)shell, NULL };
+            execvp(shell, argv);
         }
 
-        char *argv[] = { (char *)shell, NULL };
-        execvp(shell, argv);
-
-        /* If execvp returns, it failed */
-        LOGE("execvp(%s) failed: %s", shell, strerror(errno));
+        /* If exec returns, it failed */
+        LOGE("exec(%s) failed: %s", shell, strerror(errno));
         _exit(127);
     }
 

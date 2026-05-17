@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class PtySession(
     private val shellPath: String = "/system/bin/sh",
-    private val cwd: String = "/data/data/com.termx.app/files",
+    private val cwd: String = "/data/data/com.termx.app/files/home",
     private val env: Map<String, String> = defaultEnv()
 ) {
     companion object {
@@ -46,11 +46,9 @@ class PtySession(
             env["COLORTERM"] = "truecolor"
             env["LANG"] = "en_US.UTF-8"
             env["PATH"] = buildPath()
-            env["HOME"] = "/data/data/com.termx.app/files"
+            env["HOME"] = "/data/data/com.termx.app/files/home"
             env["SHELL"] = "/system/bin/sh"
-            env["ANDROID_ROOT"] = System.getenv("ANDROID_ROOT") ?: "/system"
-            env["ANDROID_DATA"] = System.getenv("ANDROID_DATA") ?: "/data"
-            env["HOSTNAME"] = "android"
+            env["HOSTNAME"] = "termx"
             env["TMPDIR"] = "/data/data/com.termx.app/files/usr/tmp"
             env["PREFIX"] = "/data/data/com.termx.app/files/usr"
             env["LD_LIBRARY_PATH"] = "/data/data/com.termx.app/files/usr/lib"
@@ -147,6 +145,12 @@ class PtySession(
      */
     fun start() {
         if (isRunning.get()) return
+
+        // Ensure working directory exists
+        val cwdFile = java.io.File(cwd)
+        if (!cwdFile.exists()) {
+            cwdFile.mkdirs()
+        }
 
         try {
             if (useNativePty) {

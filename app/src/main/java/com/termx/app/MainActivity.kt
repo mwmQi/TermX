@@ -813,12 +813,20 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val resolutions = arrayOf("1024x768", "1280x720", "1280x1024", "1920x1080", "2560x1440")
+        val (autoW, autoH) = X11Manager.calculateAutoResolution(this)
+        val resolutions = arrayOf(
+            "${autoW}x${autoH} (Auto)",
+            "1024x768",
+            "1280x720",
+            "1280x1024",
+            "1920x1080",
+            "2560x1440"
+        )
 
         AlertDialog.Builder(this)
             .setTitle("Start Display :$displayNum")
             .setItems(resolutions) { _, which ->
-                val (w, h) = resolutions[which].split("x").map { it.toInt() }
+                val (w, h) = resolutions[which].substringBefore(" (").split("x").map { it.toInt() }
 
                 // Create the display session through SessionManager
                 val info = sessionManager.createDisplaySession(displayNum, w, h)

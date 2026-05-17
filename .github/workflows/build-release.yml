@@ -1,0 +1,167 @@
+name: Build & Release APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create a GitHub Release'
+        type: boolean
+        default: true
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build, Sign & Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Android SDK components
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.1.10909125" "cmake;3.22.1"
+
+      - name: Generate release keystore
+        if: env.RELEASE_KEYSTORE_BASE64 == ''
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          echo "No release keystore found in secrets, generating debug keystore..."
+          keytool -genkeypair -v \
+            -keystore release-keystore.jks \
+            -alias termx-release \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass ${{ secrets.RELEASE_KEYSTORE_PASSWORD || 'termx123' }} \
+            -keypass ${{ secrets.RELEASE_KEY_PASSWORD || 'termx123' }} \
+            -dname "CN=TermX, OU=TermX, O=TermX, L=Unknown, S=Unknown, C=US"
+          echo "KEYSTORE_PATH=release-keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_ALIAS=termx-release" >> $GITHUB_ENV
+
+      - name: Decode release keystore from secrets
+        if: env.RELEASE_KEYSTORE_BASE64 != ''
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          echo "$RELEASE_KEYSTORE_BASE64" | base64 -d > release-keystore.jks
+          echo "KEYSTORE_PATH=release-keystore.jks" >> $GITHUB_ENV
+          echo "KEYSTORE_ALIAS=termx-release" >> $GITHUB_ENV
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build Release APK
+        env:
+          RELEASE_KEYSTORE_PATH: ${{ env.KEYSTORE_PATH }}
+          RELEASE_KEYSTORE_ALIAS: ${{ env.KEYSTORE_ALIAS }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD || 'termx123' }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD || 'termx123' }}
+        run: |
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Find built APK
+        id: find-apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" -type f | head -1)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "apk_size=$APK_SIZE" >> $GITHUB_OUTPUT
+          APK_NAME=$(basename "$APK_PATH")
+          echo "apk_name=$APK_NAME" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH ($APK_SIZE)"
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
+          apksigner verify --verbose "$APK_PATH"
+          echo "APK signature verified successfully"
+
+      - name: Generate SHA256 checksum
+        run: |
+          APK_PATH="${{ steps.find-apk.outputs.apk_path }}"
+          sha256sum "$APK_PATH" > "${{ steps.find-apk.outputs.apk_path }}.sha256"
+          cat "${{ steps.find-apk.outputs.apk_path }}.sha256"
+
+      - name: Get version info
+        id: version
+        run: |
+          # Extract version from tag or generate one
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="v$(date +%Y%m%d)-${{ github.run_number }}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Get commit info
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          echo "commit_message=$COMMIT_MSG" >> $GITHUB_OUTPUT
+
+          # Get short commit hash
+          COMMIT_HASH=$(git log -1 --pretty=%h)
+          echo "commit_hash=$COMMIT_HASH" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' || github.event.inputs.create_release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: "TermX ${{ steps.version.outputs.version }}"
+          body: |
+            ## TermX ${{ steps.version.outputs.version }}
+
+            **Commit:** ${{ steps.version.outputs.commit_hash }}
+            **Message:** ${{ steps.version.outputs.commit_message }}
+
+            ### Features
+            - Native PTY terminal with job control and signal handling
+            - X11 virtual display server with multi-display support
+            - Auto-resolution detection for displays
+            - Pinch-to-zoom terminal text
+            - Proper UTF-8 support
+            - 11 Priority 3 APIs (Camera, SMS, Fingerprint, etc.)
+
+            ### Installation
+            1. Download the APK below
+            2. Enable "Install from Unknown Sources" in Android settings
+            3. Install and open TermX
+
+            ### Checksum
+            ```
+            ${{ steps.find-apk.outputs.apk_name }}: $(cat ${{ steps.find-apk.outputs.apk_path }}.sha256 | cut -d' ' -f1)
+            ```
+          files: |
+            ${{ steps.find-apk.outputs.apk_path }}
+            ${{ steps.find-apk.outputs.apk_path }}.sha256
+          draft: false
+          prerelease: ${{ !startsWith(github.ref, 'refs/tags/v') || contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          generate_release_notes: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: termx-release-apk
+          path: ${{ steps.find-apk.outputs.apk_path }}
+          retention-days: 30

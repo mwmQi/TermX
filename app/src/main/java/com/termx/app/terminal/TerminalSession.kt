@@ -17,7 +17,7 @@ import java.nio.charset.StandardCharsets
  */
 class TerminalSession(
     private val shellPath: String = "/system/bin/sh",
-    private val cwd: String = System.getProperty("user.home", "/"),
+    private val cwd: String = "/data/data/com.termx.app/files/home",
     private val env: Map<String, String> = defaultEnv()
 ) {
     companion object {

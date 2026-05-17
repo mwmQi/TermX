@@ -126,7 +126,7 @@ class PreferenceManager(context: Context) {
         get() = prefs.getBoolean("auto_update_index", false)
         set(value) = prefs.edit().putBoolean("auto_update_index", value).apply()
 
-    // Initial working directory — defaults to $PREFIX/home for package manager support
+    // Initial working directory
     var initialDir: String
         get() = prefs.getString("initial_dir", "/data/data/com.termx.app/files/home") ?: "/data/data/com.termx.app/files/home"
         set(value) = prefs.edit().putString("initial_dir", value).apply()

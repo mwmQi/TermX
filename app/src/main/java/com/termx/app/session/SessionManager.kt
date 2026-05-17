@@ -121,7 +121,7 @@ class SessionManager private constructor(private val context: Context) {
 
     fun createSession(
         shellPath: String = "/system/bin/sh",
-        cwd: String = "/data/data/com.termx.app/files",
+        cwd: String = "/data/data/com.termx.app/files/home",
         colors: TerminalColors = TerminalColors.catppuccinMocha()
     ): SessionType.Terminal {
         val num = getNextSessionNumber()
@@ -187,14 +187,14 @@ class SessionManager private constructor(private val context: Context) {
      * This starts a virtual X11 display and adds it as a session tab.
      *
      * @param displayNum Display number (0 for :0, etc.)
-     * @param width Display width
-     * @param height Display height
+     * @param width Display width (0 = auto-detect from screen)
+     * @param height Display height (0 = auto-detect from screen)
      * @return DisplayInfo or null if failed
      */
     fun createDisplaySession(
         displayNum: Int = X11Manager.allocateDisplayNum(),
-        width: Int = 1024,
-        height: Int = 768
+        width: Int = 0,
+        height: Int = 0
     ): DisplayInfo? {
         if (displayNum < 0) return null
 

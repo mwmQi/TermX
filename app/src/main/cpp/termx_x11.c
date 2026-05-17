@@ -393,6 +393,7 @@ typedef struct X11Server {
     /* Input state */
     int mouse_x, mouse_y;
     int mouse_buttons;
+    int last_mouse_buttons;  /* For delta detection in pointer events */
     int keyboard_state[32];  /* 256 bits */
 
     /* Threading */
@@ -1000,7 +1001,7 @@ static void *client_handler(void *arg) {
                     if (vmask & 0x000040) { gc->fill_style = read_card32(client, req_data_buf + voff); voff += 4; }
                     if (vmask & 0x08000) { gc->graphics_exposures = read_card32(client, req_data_buf + voff); voff += 4; }
                     if (vmask & 0x04000) { gc->clip_x_origin = read_card32(client, req_data_buf + voff); voff += 4; }
-                    if (vmask & 0x08000) { gc->clip_y_origin = read_card32(client, req_data_buf + voff); voff += 4; }
+                    if (vmask & 0x10000) { gc->clip_y_origin = read_card32(client, req_data_buf + voff); voff += 4; }
 
                     server->gc_count++;
                 }
@@ -1277,6 +1278,12 @@ static void *client_handler(void *arg) {
                 uint8_t format = req_data_buf[12];
                 uint32_t num_units = read_card32(client, req_data_buf + 16);
 
+                /* Validate format: must be 8, 16, or 32 */
+                if (format != 8 && format != 16 && format != 32) {
+                    LOGW("X_ChangeProperty: invalid format %d", format);
+                    break;
+                }
+
                 if (server->property_count < MAX_PROPERTIES) {
                     XProperty *prop = &server->properties[server->property_count];
                     prop->atom = property;
@@ -1285,7 +1292,9 @@ static void *client_handler(void *arg) {
                     prop->format = format;
                     prop->data_len = num_units * (format / 8);
                     if (prop->data_len > 4096) prop->data_len = 4096;
-                    memcpy(prop->data, req_data_buf + 20, prop->data_len);
+                    if (prop->data_len > 0) {
+                        memcpy(prop->data, req_data_buf + 20, prop->data_len);
+                    }
                     server->property_count++;
 
                     /* Handle WM_NAME specially */
@@ -1316,6 +1325,12 @@ static void *client_handler(void *arg) {
 
                 int reply_len;
                 if (found) {
+                    /* Validate format to avoid division by zero */
+                    if (found->format != 8 && found->format != 16 && found->format != 32) {
+                        LOGW("X_GetProperty: invalid format %d", found->format);
+                        break;
+                    }
+
                     int data_bytes = found->data_len;
                     int padded = (data_bytes + 3) & ~3;
                     reply_len = 32 + padded;
@@ -1794,7 +1809,7 @@ static void stop_server(X11Server *server) {
     if (!server) return;
     server->running = 0;
 
-    /* Close server socket */
+    /* Close server socket to wake up accept thread */
     if (server->server_fd >= 0) {
         close(server->server_fd);
         server->server_fd = -1;
@@ -1811,19 +1826,28 @@ static void stop_server(X11Server *server) {
         }
     }
 
-    /* Wait briefly for threads to exit */
-    usleep(200000);
+    /* Wait briefly for threads to exit using multiple short sleeps */
+    for (int i = 0; i < 10; i++) {
+        usleep(50000);  /* 50ms * 10 = 500ms total */
+        /* Check if accept thread has exited */
+        void *thread_ret;
+        if (pthread_tryjoin_np(server->accept_thread, &thread_ret) == 0) {
+            break;  /* Thread exited */
+        }
+    }
 
     /* Free pixmaps */
     for (int i = 0; i < server->pixmap_count; i++) {
         free(server->pixmaps[i].data);
     }
+    server->pixmap_count = 0;
 
     /* Free framebuffer */
     if (server->framebuffer) {
         free(server->framebuffer);
         server->framebuffer = NULL;
     }
+    server->fb_size = 0;
 
     pthread_mutex_destroy(&server->lock);
 
@@ -1995,7 +2019,8 @@ Java_com_termx_app_terminal_JniX11_nativeSendPointerEvent(JNIEnv *env, jclass cl
     }
 
     /* Send ButtonPress/Release for changed buttons */
-    static int prev_buttons = 0;
+    /* Fixed: use per-server mouse_buttons instead of shared static variable */
+    int prev_buttons = server->last_mouse_buttons;
     int changed = buttonMask ^ prev_buttons;
     if (changed) {
         for (int btn = 1; btn <= 3; btn++) {
@@ -2021,7 +2046,7 @@ Java_com_termx_app_terminal_JniX11_nativeSendPointerEvent(JNIEnv *env, jclass cl
             }
         }
     }
-    prev_buttons = buttonMask;
+    server->last_mouse_buttons = buttonMask;
 
     pthread_mutex_unlock(&server->lock);
 }

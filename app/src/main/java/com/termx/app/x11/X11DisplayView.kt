@@ -10,6 +10,7 @@ import android.view.SurfaceView
 
 /**
  * Custom View that renders the virtual framebuffer for a specific X11 display.
+ * Renders the X11 framebuffer scaled to fit the view with pinch-to-zoom support.
  */
 class X11DisplayView @JvmOverloads constructor(
     context: Context,
@@ -45,12 +46,16 @@ class X11DisplayView @JvmOverloads constructor(
     // Paint
     private val bitmapPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
-    // Cached display dimensions
-    private var fbWidth = 1024
-    private var fbHeight = 768
+    // Cached display dimensions — updated from X11Manager info
+    @Volatile private var fbWidth: Int = 1024
+    @Volatile private var fbHeight: Int = 768
+
+    // Track if we've already resized to avoid repeated resize calls
+    private var hasResizedToView = false
 
     init {
         holder.addCallback(this)
+        setWillNotDraw(false)
     }
 
     fun initDisplay(displayNum: Int, isNative: Boolean, nativeHandle: Long, kotlinServer: X11DisplayServer?) {
@@ -58,6 +63,7 @@ class X11DisplayView @JvmOverloads constructor(
         this.isNative = isNative
         this.nativeHandle = nativeHandle
         this.kotlinServer = kotlinServer
+        hasResizedToView = false
         updateDimensions()
     }
 
@@ -93,9 +99,21 @@ class X11DisplayView @JvmOverloads constructor(
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
-        if (w > 0 && h > 0) {
-            X11Manager.resizeDisplay(displayNum, w, h)
-            updateDimensions()
+        if (w > 0 && h > 0 && !hasResizedToView) {
+            // Only auto-resize the X11 display once when the view is first laid out.
+            // This avoids expensive framebuffer reallocations on every rotation/keyboard event.
+            // Use 90% of view size to leave some margin.
+            val targetW = (w * 0.9f).toInt().coerceIn(640, 2560)
+            val targetH = (h * 0.9f).toInt().coerceIn(480, 1440)
+            val alignedW = (targetW / 8) * 8
+            val alignedH = (targetH / 8) * 8
+
+            // Only resize if dimensions differ significantly from current
+            if (alignedW != fbWidth || alignedH != fbHeight) {
+                X11Manager.resizeDisplay(displayNum, alignedW, alignedH)
+                updateDimensions()
+            }
+            hasResizedToView = true
         }
     }
 
@@ -118,7 +136,7 @@ class X11DisplayView @JvmOverloads constructor(
                     continue
                 }
 
-                // Update dimensions
+                // Update dimensions from manager (may have changed externally)
                 updateDimensions()
 
                 if (fbWidth <= 0 || fbHeight <= 0) {
@@ -134,7 +152,7 @@ class X11DisplayView @JvmOverloads constructor(
                         kotlinServer?.framebufferRef?.getSnapshot()
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Failed to get bitmap", e)
+                    Log.e(TAG, "Failed to get bitmap for display :$displayNum", e)
                     null
                 } ?: continue
 
@@ -148,11 +166,13 @@ class X11DisplayView @JvmOverloads constructor(
                     // Clear
                     canvas.drawColor(Color.BLACK)
 
-                    // Calculate scaling
+                    // Calculate scaling to fit view
                     val viewWidth = width.toFloat()
                     val viewHeight = height.toFloat()
                     val fbWidthF = fbWidth.toFloat()
                     val fbHeightF = fbHeight.toFloat()
+
+                    if (fbWidthF <= 0 || fbHeightF <= 0) continue
 
                     val fitScale = kotlin.math.min(viewWidth / fbWidthF, viewHeight / fbHeightF)
                     val finalScale = fitScale * scaleFactor
@@ -167,14 +187,13 @@ class X11DisplayView @JvmOverloads constructor(
                     val dstRect = RectF(drawX, drawY, drawX + drawWidth, drawY + drawHeight)
                     canvas.drawBitmap(bitmap, srcRect, dstRect, bitmapPaint)
 
-                    // Draw cursor
-                    val cursorInfo = if (isNative) {
-                        null
-                    } else {
+                    // Draw cursor for Kotlin server
+                    val cursorInfo = if (!isNative) {
                         kotlinServer?.framebufferRef?.let { fb ->
                             Pair(fb.cursorX, fb.cursorY)
                         }
-                    }
+                    } else null
+
                     if (cursorInfo != null) {
                         val cursorX = drawX + cursorInfo.first * finalScale
                         val cursorY = drawY + cursorInfo.second * finalScale
@@ -187,7 +206,7 @@ class X11DisplayView @JvmOverloads constructor(
                         canvas.drawLine(cursorX - 10 * finalScale, cursorY, cursorX + 10 * finalScale, cursorY, cursorPaint)
                     }
 
-                    // Draw display tag
+                    // Draw display tag overlay
                     val tagPaint = Paint().apply {
                         color = Color.argb(200, 255, 255, 255)
                         textSize = 12f * resources.displayMetrics.density
@@ -236,7 +255,7 @@ class X11DisplayView @JvmOverloads constructor(
                         pinchStartDist = dist
                         pinchStartScale = scaleFactor
                     } else {
-                        scaleFactor = (pinchStartScale * dist / pinchStartDist).coerceIn(0.5f, 5f)
+                        scaleFactor = (pinchStartScale * dist / pinchStartDist).coerceIn(0.25f, 5f)
                     }
                 } else if (!isPinching) {
                     val dx = event.x - lastTouchX
@@ -259,7 +278,14 @@ class X11DisplayView @JvmOverloads constructor(
             }
 
             MotionEvent.ACTION_POINTER_DOWN -> {
-                mouseButtonMask = 1
+                // Don't change mouse state on multi-touch
+            }
+
+            MotionEvent.ACTION_POINTER_UP -> {
+                // Check if we still have 2 fingers
+                if (event.pointerCount < 2) {
+                    isPinching = false
+                }
             }
         }
         return true
@@ -268,16 +294,24 @@ class X11DisplayView @JvmOverloads constructor(
     private fun viewToFramebuffer(viewX: Float, viewY: Float): Pair<Int, Int> {
         val viewWidth = width.toFloat()
         val viewHeight = height.toFloat()
-        val fitScale = kotlin.math.min(viewWidth / fbWidth, viewHeight / fbHeight) * scaleFactor
+        val fbW = fbWidth.toFloat()
+        val fbH = fbHeight.toFloat()
 
-        val fbX = ((viewX - (viewWidth - fbWidth * fitScale) / 2 - offsetX) / fitScale).toInt()
+        if (fbW <= 0 || fbH <= 0) return Pair(0, 0)
+
+        val fitScale = kotlin.math.min(viewWidth / fbW, viewHeight / fbH) * scaleFactor
+
+        if (fitScale <= 0f) return Pair(0, 0)
+
+        val fbX = ((viewX - (viewWidth - fbW * fitScale) / 2 - offsetX) / fitScale).toInt()
             .coerceIn(0, fbWidth - 1)
-        val fbY = ((viewY - (viewHeight - fbHeight * fitScale) / 2 - offsetY) / fitScale).toInt()
+        val fbY = ((viewY - (viewHeight - fbH * fitScale) / 2 - offsetY) / fitScale).toInt()
             .coerceIn(0, fbHeight - 1)
         return Pair(fbX, fbY)
     }
 
     private fun getPinchDistance(event: MotionEvent): Float {
+        if (event.pointerCount < 2) return 0f
         val dx = event.getX(0) - event.getX(1)
         val dy = event.getY(0) - event.getY(1)
         return kotlin.math.sqrt(dx * dx + dy * dy)

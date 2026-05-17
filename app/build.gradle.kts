@@ -39,6 +39,26 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // Signing configuration for CI/CD
+            // Set these environment variables in GitHub Actions secrets:
+            //   RELEASE_KEYSTORE_PATH - path to keystore file
+            //   RELEASE_KEYSTORE_ALIAS - key alias
+            //   RELEASE_KEYSTORE_PASSWORD - keystore password
+            //   RELEASE_KEY_PASSWORD - key password
+            val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+            val keystoreAlias = System.getenv("RELEASE_KEYSTORE_ALIAS")
+            val keystorePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+            val keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+
+            if (!keystorePath.isNullOrBlank() && File(keystorePath).exists()) {
+                signingConfig = signingConfigs.create("release").apply {
+                    storeFile = File(keystorePath)
+                    storePassword = keystorePassword
+                    keyAlias = keystoreAlias
+                    keyPassword = keyPassword
+                }
+            }
         }
         debug {
             isDebuggable = true

@@ -45,9 +45,10 @@ class TerminalView @JvmOverloads constructor(
             invalidate()
         }
 
-    private var fontSize: Float = 14f // in SP
+    private var fontSize: Float = 12f // in DP (density-independent pixels)
     private var fontType: String = "monospace"
     private var renderer: TerminalRenderer? = null
+    private var scaleFactor: Float = 1f
 
     // Paints
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -110,10 +111,15 @@ class TerminalView @JvmOverloads constructor(
 
     private fun updateFont() {
         val density = resources.displayMetrics.density
-        val pxSize = fontSize * density
+        val pxSize = (fontSize * scaleFactor * density).toInt().coerceIn(6, 64)
 
-        renderer = TerminalRenderer(pxSize, Typeface.MONOSPACE)
-        
+        val typeface = when (fontType.lowercase()) {
+            "monospace" -> Typeface.MONOSPACE
+            else -> Typeface.MONOSPACE
+        }
+
+        renderer = TerminalRenderer(pxSize.toFloat(), typeface)
+
         charWidth = renderer!!.fontWidth
         charHeight = renderer!!.fontLineSpacing.toFloat()
         cellWidth = charWidth
@@ -122,18 +128,18 @@ class TerminalView @JvmOverloads constructor(
         cursorPaint.color = colors.cursor
         cursorPaint.style = Paint.Style.FILL
 
-        // Calculate terminal size
         recalculateSize()
     }
 
     private fun recalculateSize() {
         if (width <= 0 || height <= 0) return
-        
+        val r = renderer ?: return
+
         val availWidth = (width - paddingLeftPx - paddingRightPx).coerceAtLeast(cellWidth)
         val availHeight = (height - paddingTopPx - paddingBottomPx).coerceAtLeast(cellHeight)
 
         val newCols = (availWidth / cellWidth).toInt().coerceAtLeast(4)
-        val newRows = (availHeight / cellHeight).toInt().coerceAtLeast(4)
+        val newRows = ((availHeight - r.fontLineSpacingAndAscent) / cellHeight).toInt().coerceAtLeast(4)
 
         if (newCols != buffer.columns || newRows != buffer.rows) {
             buffer.resize(newCols, newRows)
@@ -238,31 +244,21 @@ class TerminalView @JvmOverloads constructor(
         })
 
         scaleDetector = ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            private var lastScaleTime: Long = 0
-
             override fun onScale(detector: ScaleGestureDetector): Boolean {
-                val now = System.currentTimeMillis()
-                if (now - lastScaleTime < 100) return false
-                
-                val factor = detector.scaleFactor
-                if (factor > 1.1f) {
-                    if (fontSize < 32f) {
-                        fontSize += 1f
-                        updateFont()
-                        invalidate()
-                        lastScaleTime = now
-                    }
-                    return true
-                } else if (factor < 0.9f) {
-                    if (fontSize > 8f) {
-                        fontSize -= 1f
-                        updateFont()
-                        invalidate()
-                        lastScaleTime = now
-                    }
-                    return true
+                scaleFactor *= detector.scaleFactor
+                scaleFactor = scaleFactor.coerceIn(0.5f, 3f)
+
+                val newFontSize = (fontSize * scaleFactor).toInt().coerceIn(6, 64)
+                val currentFontSize = renderer?.let {
+                    // Extract current effective size from renderer
+                    (fontSize * scaleFactor).toInt()
+                } ?: newFontSize
+
+                if (kotlin.math.abs(newFontSize - currentFontSize) >= 1) {
+                    updateFont()
+                    invalidate()
                 }
-                return false
+                return true
             }
         })
     }
@@ -468,6 +464,7 @@ class TerminalView @JvmOverloads constructor(
 
     fun setFontSize(size: Float) {
         fontSize = size
+        scaleFactor = 1f
         updateFont()
         invalidate()
     }
